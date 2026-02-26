@@ -1,0 +1,85 @@
+XzalgoChain - 320-bit Cryptographic Hash Function
+Copyright 2026 Xzrayツ
+
+This product includes software developed by Xzrayツ.
+
+========================================================================
+XZALGOCHAIN - HIGH-PERFORMANCE CRYPTOGRAPHIC HASH FUNCTION
+========================================================================
+
+THIS IS STILL AN EARLY VERSION, NOT MEANT TO BE USED FOR ANY CRITICAL PURPOSE!!
+USE AT YOUR OWN RISK!
+
+XzalgoChain is a 320-bit cryptographic hash function designed for high 
+performance across multiple platforms. Key features include:
+
+- 320-bit (40-byte) hash output providing 160 bits of collision resistance
+- Optimized SIMD implementations for x86/x64 (AVX2) and ARM (NEON) architectures
+- Automatic CPU feature detection with graceful fallback to scalar implementation
+- OpenMP support for parallel processing on multi-core systems
+- Cross-platform compatibility: Windows, Linux, macOS, Android, iOS
+- Thread-safe design with atomic operations for global settings
+- Single-file header implementation for easy integration
+- Apache 2.0 licensed for maximum flexibility
+
+The algorithm combines ARX (Add-Rotate-XOR) operations, gamma mixing functions,
+sigma transforms, and multiple rounds of "Little Box" and "Big Box" processing
+to achieve strong cryptographic properties including:
+
+- High avalanche effect (changing one input bit flips ~90% in ASCII and ~50% of 1 bit of output bits)
+- Resistance to length extension attacks
+- Strong diffusion and confusion properties
+- Resistance to known cryptanalytic attacks
+
+========================================================================
+USAGE IN CLOSED SOURCE APPLICATIONS
+========================================================================
+
+If you use XzalgoChain in a closed source or proprietary application,
+you must comply with the Apache License, Version 2.0. This includes the
+following additional requirements:
+
+1. ATTRIBUTION: You must retain all copyright notices, license text, and
+   acknowledgments in any distribution or derivative work. This includes
+   any user interfaces, documentation, or about boxes where such
+   attributions are typically displayed.
+
+2. NOTICE: The following notice must be included in your application's
+   documentation, About box, or other appropriate location:
+
+   "This product includes cryptographic software developed by Xzrayツ.
+    XzalgoChain - 320-bit Cryptographic Hash Function
+    Copyright 2026 Xzrayツ
+    Licensed under the Apache License, Version 2.0
+    https://github.com/Xzray03/XzalgoChain"
+
+3. NO ENDORSEMENT: The names "XzalgoChain", "Xzrayツ", and contributors
+   may not be used to endorse or promote your products without specific
+   prior written permission.
+
+4. DISCLAIMER OF WARRANTIES: The software is provided "AS IS", without
+   warranties of merchantability, fitness for a particular purpose, or
+   non-infringement, as stated in the Apache License.
+
+========================================================================
+PROJECT LINKS
+========================================================================
+
+GitHub Repository:
+   https://github.com/Xzray03/XzalgoChain
+
+Documentation: (IN MAIN REPOSITORY)
+
+Issue Tracker:
+   https://github.com/Xzray03/XzalgoChain/issues
+
+========================================================================
+CONTACT
+========================================================================
+
+For questions, feedback, or issue:
+
+Email: xzray@proton.me
+GitHub: https://github.com/Xzray03
+
+========================================================================
