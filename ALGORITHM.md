@@ -1,5 +1,5 @@
 <h1 align="left">
-  <img src="logo.svg" alt="Logo" width="40" height="40" style="vertical-align: middle;">
+  <img src="logo.svg" alt="Logo" width="75" height="75" style="vertical-align: middle;">
   XzalgoChain - 320-bit Cryptographic Hash Function
 </h1>
 
