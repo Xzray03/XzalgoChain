@@ -1,11 +1,10 @@
 <h1 align="left">
-  <img src="logo.svg" alt="Logo" width="40" height="40" style="vertical-align: middle;">
+  <img src="logo.svg" alt="Logo" width="75" height="75" style="vertical-align: middle;">
   XzalgoChain - 320-bit Cryptographic Hash Function
 </h1>
 
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 ![C](https://img.shields.io/badge/C-C17-blue.svg)
-![Algorithm](https://img.shields.io/badge/Algoritma-Paralel-blue?logo=brain)
 
 XzalgoChain is a high-performance cryptographic hash function that produces 320-bit (40-byte) hash values. It features SIMD-accelerated implementations for both x86 (AVX2) and ARM (NEON) architectures, with automatic runtime detection and fallback to scalar code.
 
