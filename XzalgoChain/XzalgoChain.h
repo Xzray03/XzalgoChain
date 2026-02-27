@@ -33,17 +33,6 @@
 extern "C" {
 #endif
 
-/* Forward declarations for SIMD-specific execution functions
- * These are conditionally defined based on architecture support
- */
-#if defined(__AVX2__) && (defined(__x86_64__) || defined(__i386__))
-static inline void little_box_execute_simd4(uint64_t *input, uint64_t salt_simd, uint64_t round_base, size_t num_blocks);
-#endif
-
-#if defined(__ARM_NEON) && (defined(__arm__) || defined(__aarch64__))
-static inline void little_box_execute_neon4(uint64_t *input, uint64_t salt_simd, uint64_t round_base, size_t num_blocks);
-#endif
-
 /* ==================== FORWARD DECLARATIONS ==================== */
 
 /* Forward declarations for scalar mode control functions
@@ -52,7 +41,10 @@ static inline void little_box_execute_neon4(uint64_t *input, uint64_t salt_simd,
  */
 static inline void xzalgochain_force_scalar(int force);
 static inline int xzalgochain_is_forced_scalar(void);
-static inline void xzalgochain_auto_detect(void);
+
+#if defined(__ARM_NEON) && (defined(__arm__) || defined(__aarch64__))
+static inline void little_box_execute_neon4(uint64_t *input, uint64_t salt_simd, uint64_t round_base, size_t num_blocks);
+#endif
 
 /* ==================== STATE STRUCTURE ==================== */
 
