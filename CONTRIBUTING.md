@@ -29,7 +29,7 @@ Thank you for your interest in contributing to XzalgoChain! This document outlin
 - Clear, readable, and well-documented code
 - Comprehensive test coverage
 - No undefined behavior
-- Strict adherence to language standards (C11/C++11)
+- Strict adherence to language standards (C11)
 
 ## Contribution Types
 
