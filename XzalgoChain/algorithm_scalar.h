@@ -86,7 +86,7 @@ typedef struct {
  * @return 256-bit vector with specified lane values
  */
 static inline vec256_t vec256_set(uint64_t l0, uint64_t l1, uint64_t l2, uint64_t l3) {
-    vec256_t v = {l0, l1, l2, l3};
+    vec256_t v = {{l0, l1, l2, l3}};
     return v;
 }
 
@@ -96,7 +96,7 @@ static inline vec256_t vec256_set(uint64_t l0, uint64_t l1, uint64_t l2, uint64_
  * @return 256-bit vector with all lanes = val
  */
 static inline vec256_t vec256_set1(uint64_t val) {
-    vec256_t v = {val, val, val, val};
+    vec256_t v = {{val, val, val, val}};
     return v;
 }
 
