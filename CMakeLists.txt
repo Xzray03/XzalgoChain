@@ -94,6 +94,22 @@ endif()
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+# ==================== OPENMP DETECTION ====================
+
+if(XZALGOCHAIN_USE_OPENMP)
+    find_package(OpenMP)
+    if(OpenMP_C_FOUND)
+        set(HAVE_OPENMP TRUE)
+        message(STATUS "OpenMP found: ${OpenMP_C_FLAGS}")
+    else()
+        set(HAVE_OPENMP FALSE)
+        message(STATUS "OpenMP not found - parallel processing disabled")
+    endif()
+else()
+    set(HAVE_OPENMP FALSE)
+    message(STATUS "OpenMP disabled by user option")
+endif()
+
 # Warning flags
 if(MSVC)
     add_compile_options(/W3)
@@ -214,10 +230,6 @@ target_include_directories(XzalgoChain_interface INTERFACE
     $<INSTALL_INTERFACE:include/XzalgoChain>
 )
 
-target_compile_definitions(XzalgoChain_interface INTERFACE
-    $<$<BOOL:${HAVE_OPENMP}>:_OPENMP>
-)
-
 if(OpenMP_C_FOUND)
     target_link_libraries(XzalgoChain_interface INTERFACE OpenMP::OpenMP_C)
 endif()
@@ -239,10 +251,6 @@ if(BUILD_STATIC_LIBS)
 
     target_compile_definitions(XzalgoChain_static PRIVATE
         XZALGOCHAIN_STATIC=1
-    )
-
-    target_compile_definitions(XzalgoChain_static PUBLIC
-        $<$<BOOL:${HAVE_OPENMP}>:_OPENMP>
     )
 
     # Link with OpenMP if available
@@ -276,10 +284,6 @@ if(BUILD_SHARED_LIBS)
     target_compile_definitions(XzalgoChain_shared PRIVATE
         XZALGOCHAIN_SHARED=1
         XZALGOCHAIN_EXPORTS=1
-    )
-
-    target_compile_definitions(XzalgoChain_shared PUBLIC
-        $<$<BOOL:${HAVE_OPENMP}>:_OPENMP>
     )
 
     # Link with OpenMP if available
