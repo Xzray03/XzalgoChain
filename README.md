@@ -107,8 +107,10 @@ See [ALGORITHM.md](ALGORITHM.md) for complete design documentation and [TEST.md]
 XzalgoChain
 ├── ALGORITHM.md                        # Complete cryptographic algorithm documentation
 ├── CONTRIBUTING.md                     # Developer contribution guidelines
+├── INTEGRATION.md                      # Examples of integration into other languages
 ├── LICENSE                             # Project license (MIT/GPL/etc)
 ├── logo.svg                            # XzalgoChain project logo
+├── CMakeLists.txt                      # Static and shared library build system
 ├── Makefile                            # Main build system
 ├── NOTICE                              # Legal notices and attributions
 ├── README.md                           # Main project documentation (This file)
@@ -131,6 +133,7 @@ XzalgoChain
 │   └── sac_test.c                      # Strict Avalanche Criterion testing
 │
 ├── xzalgo320sum.c                      # Command-line hashing utility
+├── xzalgochain.c                       # Main point for the library
 │
 └── XzalgoChain/                        # Core header-only library
     ├── algorithm.h                     # Core cryptographic primitives
