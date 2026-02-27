@@ -3,7 +3,9 @@
 # Copyright 2026 Xzrayツ
 
 cmake_minimum_required(VERSION 3.10)
-project(XzalgoChain VERSION 0.0.1 LANGUAGES C)
+project(XzalgoChain VERSION 0.0.1.1 LANGUAGES C)
+
+include(CheckCCompilerFlag)
 
 # ==================== PROJECT CONFIGURATION ====================
 
