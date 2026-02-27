@@ -186,13 +186,6 @@ ifdef SANITIZE
     LDFLAGS += -fsanitize=address -fsanitize=undefined
 endif
 
-# Static linking
-ifdef STATIC
-    # Produce a fully statically linked executable
-    CFLAGS += -static
-    LDFLAGS += -static
-endif
-
 # Size-optimized build
 ifdef TINY
     # Optimize for size and strip symbols
@@ -251,9 +244,6 @@ profile: clean
 
 sanitize: clean
 	$(MAKE) SANITIZE=1 all
-
-static: clean
-	$(MAKE) STATIC=1 all
 
 tiny: clean
 	$(MAKE) TINY=1 all
@@ -352,7 +342,6 @@ help:
 	@echo "  debug                  - Debug build"
 	@echo "  profile                - Profile build"
 	@echo "  sanitize               - Sanitizer build"
-	@echo "  static                 - Static build"
 	@echo "  tiny                   - Size-optimized build"
 	@echo "  verbose                - Verbose build"
 	@echo ""
@@ -367,7 +356,7 @@ help:
 	@echo "  help                   - Show this help"
 
 # Declare phony targets (targets that don't represent actual files)
-.PHONY: all build run clean clean-obj install uninstall debug profile sanitize static tiny verbose test info help
+.PHONY: all build run clean clean-obj install uninstall debug profile sanitize tiny verbose test info help
 .PHONY: cross-windows cross-windows-32 cross-android-arm64 cross-android-arm cross-android-x86 cross-android-x86_64
 .PHONY: cross-ios-arm64 cross-macos-arm64 cross-linux-arm64 cross-linux-arm
 
