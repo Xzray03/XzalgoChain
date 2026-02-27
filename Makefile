@@ -4,7 +4,7 @@
 
 # Compiler selection - using clang as the default compiler
 # clang offers excellent cross-compilation support and diagnostic messages
-CC = clang
+CC = gcc
 
 # Directory containing the XzalgoChain header files
 XZALGO_DIR = XzalgoChain
@@ -32,11 +32,11 @@ UNAME_M := $(shell uname -m 2>/dev/null || echo "Unknown")
 # Base compiler flags:
 # -Wall -Wextra: Enable most warning messages
 # -O3: Aggressive optimization for maximum performance
-# -flto=full: Enable Link Time Optimization for better optimization across files
-CFLAGS = -Wall -Wextra -O3 -flto=full
+# -flto: Enable Link Time Optimization for better optimization across files
+CFLAGS = -Wall -Wextra -O3 -flto
 
 # Linker flags
-LDFLAGS = -flto=full
+LDFLAGS = -flto
 
 # Platform-specific configuration blocks
 # Each block defines flags, defines, and architecture optimizations for different OSes
