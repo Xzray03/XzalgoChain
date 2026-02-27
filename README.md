@@ -204,30 +204,144 @@ make CROSS_COMPILE=aarch64-linux-gnu
 # For ARM32
 make CROSS_COMPILE=arm-linux-gnueabihf
 ```
-
 ## Integration Examples
 
-### Python (using ctypes, You need to compile the shared library yourself)
+### Python (using ctypes)
 ```python
 import ctypes
-lib = ctypes.CDLL("./libxzalgochain.so")
-hash = (ctypes.c_uint8 * 40)()
-lib.xzalgochain(b"Hello", 5, hash)
-print(bytes(hash).hex())
-```
+import os
+import platform
 
-### Rust (FFI binding)
-```rust
-extern "C" {
-    fn xzalgochain(data: *const u8, len: usize, output: *mut u8);
-}
+# Load the appropriate library
+if platform.system() == "Windows":
+    lib_name = "XzalgoChain.dll"
+elif platform.system() == "Darwin":
+    lib_name = "libXzalgoChain.dylib"
+else:
+    lib_name = "libXzalgoChain.so"
 
-let mut hash = [0u8; 40];
-unsafe {
-    xzalgochain(b"Hello".as_ptr(), 5, hash.as_mut_ptr());
-}
-println!("{}", hex::encode(hash));
+lib = ctypes.CDLL(os.path.join(os.path.dirname(__file__), lib_name))
+
+# Constants
+XZALGOCHAIN_HASH_SIZE = 40
+
+# Define function prototypes
+lib.xzalgochain_lib.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint8)]
+lib.xzalgochain_lib.restype = None
+
+lib.xzalgochain_version_lib.argtypes = []
+lib.xzalgochain_version_lib.restype = ctypes.c_char_p
+
+lib.xzalgochain_platform_info_lib.argtypes = []
+lib.xzalgochain_platform_info_lib.restype = ctypes.c_char_p
+
+lib.xzalgochain_get_simd_name_lib.argtypes = []
+lib.xzalgochain_get_simd_name_lib.restype = ctypes.c_char_p
+
+lib.xzalgochain_get_simd_type_lib.argtypes = []
+lib.xzalgochain_get_simd_type_lib.restype = ctypes.c_int
+
+lib.xzalgochain_avx2_supported_lib.argtypes = []
+lib.xzalgochain_avx2_supported_lib.restype = ctypes.c_int
+
+lib.xzalgochain_neon_supported_lib.argtypes = []
+lib.xzalgochain_neon_supported_lib.restype = ctypes.c_int
+
+lib.xzalgochain_equals_lib.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.POINTER(ctypes.c_uint8)]
+lib.xzalgochain_equals_lib.restype = ctypes.c_int
+
+# Context structure
+class XzalgoChainCTX(ctypes.Structure):
+    _fields_ = [
+        ("h", ctypes.c_uint64 * 5),
+        ("little_box_state", (ctypes.c_uint64 * 10) * 10),
+        ("big_box_state", (ctypes.c_uint64 * 5) * 5),
+        ("buffer", ctypes.c_uint8 * 128),
+        ("buffer_len", ctypes.c_size_t),
+        ("total_bits", ctypes.c_uint64),
+        ("simd_type", ctypes.c_uint8)
+    ]
+
+lib.xzalgochain_init_lib.argtypes = [ctypes.POINTER(XzalgoChainCTX)]
+lib.xzalgochain_init_lib.restype = None
+
+lib.xzalgochain_update_lib.argtypes = [ctypes.POINTER(XzalgoChainCTX), ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
+lib.xzalgochain_update_lib.restype = None
+
+lib.xzalgochain_final_lib.argtypes = [ctypes.POINTER(XzalgoChainCTX), ctypes.POINTER(ctypes.c_uint8)]
+lib.xzalgochain_final_lib.restype = None
+
+lib.xzalgochain_ctx_wipe_lib.argtypes = [ctypes.POINTER(XzalgoChainCTX)]
+lib.xzalgochain_ctx_wipe_lib.restype = None
+
+def hash_data(data):
+    """Hash bytes data and return bytes"""
+    hash_array = (ctypes.c_uint8 * XZALGOCHAIN_HASH_SIZE)()
+    lib.xzalgochain_lib(ctypes.cast(data, ctypes.POINTER(ctypes.c_uint8)), 
+                        len(data), hash_array)
+    return bytes(hash_array)
+
+def hash_string(text):
+    """Hash string and return hex string"""
+    return hash_data(text.encode('utf-8')).hex()
+
+def hash_hex(data):
+    """Hash bytes and return hex string"""
+    return hash_data(data).hex()
+
+class XzalgoHasher:
+    def __init__(self):
+        self.ctx = XzalgoChainCTX()
+        lib.xzalgochain_init_lib(ctypes.byref(self.ctx))
+    
+    def update(self, data):
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        lib.xzalgochain_update_lib(ctypes.byref(self.ctx),
+                                   ctypes.cast(data, ctypes.POINTER(ctypes.c_uint8)),
+                                   len(data))
+    
+    def finalize(self):
+        hash_array = (ctypes.c_uint8 * XZALGOCHAIN_HASH_SIZE)()
+        lib.xzalgochain_final_lib(ctypes.byref(self.ctx), hash_array)
+        return bytes(hash_array)
+    
+    def __del__(self):
+        if hasattr(self, 'ctx'):
+            lib.xzalgochain_ctx_wipe_lib(ctypes.byref(self.ctx))
+
+# Example usage
+if __name__ == "__main__":
+    # Library information
+    print(f"Version: {lib.xzalgochain_version_lib().decode()}")
+    print(f"Platform: {lib.xzalgochain_platform_info_lib().decode()}")
+    print(f"SIMD: {lib.xzalgochain_get_simd_name_lib().decode()}")
+    print(f"AVX2: {bool(lib.xzalgochain_avx2_supported_lib())}")
+    print(f"NEON: {bool(lib.xzalgochain_neon_supported_lib())}")
+    
+    # Single-shot hash
+    print(f"\nHash of 'Hello World': {hash_string('Hello World')}")
+    
+    # Multi-part hashing
+    hasher = XzalgoHasher()
+    hasher.update("Hello ")
+    hasher.update("World")
+    print(f"Multi-part hash: {hasher.finalize().hex()}")
+    
+    # File hashing
+    def hash_file(filename):
+        hasher = XzalgoHasher()
+        with open(filename, 'rb') as f:
+            for chunk in iter(lambda: f.read(8192), b''):
+                hasher.update(chunk)
+        return hasher.finalize()
+    
+    # Test with small file
+    with open('test.txt', 'w') as f:
+        f.write('Hello World')
+    print(f"File hash: {hash_file('test.txt').hex()}")
 ```
+See [INTEGRATION.md](INTEGRATION.md) for complete examples.
 
 ## Contributing
 
