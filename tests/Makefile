@@ -3,8 +3,8 @@
 # Part of XzalgoChain project (Apache 2.0 License)
 
 # Compiler and flags
-CC = clang
-CFLAGS = -O3 -march=native -mtune=native -flto=full -fopenmp -lm
+CC = gcc
+CFLAGS = -O3 -march=native -mtune=native -flto -fopenmp -lm
 
 # Folder output
 BIN_DIR = bin
