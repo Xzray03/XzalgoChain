@@ -194,11 +194,6 @@ make
 sudo make install  # Optional
 ```
 
-### Windows (MSVC)
-```bash
-nmake -f Makefile.win
-```
-
 ### Cross-compiling for ARM
 ```bash
 # For ARM64
