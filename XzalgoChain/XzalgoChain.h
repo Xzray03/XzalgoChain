@@ -524,7 +524,7 @@ static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){
  * Get version string
  */
 static inline const char* xzalgochain_version(void){ 
-    return "XzalgoChain 0.0.1.1 - 320-bit";
+    return "XzalgoChain 0.0.1.2 - 320-bit";
 }
 
 /**
