@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XzalgoChain - 320-bit Cryptographic Hash Demo</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ XzalgoChain DEMO</h1>
+            <p class="subtitle">320-bit Cryptographic Hash Function - WebAssembly Implementation</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">WASM Status:</span>
+                <span id="wasm-status" class="status-value loading">Loading...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Version:</span>
+                <span id="version" class="status-value">-</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Hash from string -->
+            <div class="card">
+                <h2>📝 Hash from String</h2>
+                <div class="input-group">
+                    <label for="string-input">Input String:</label>
+                    <input type="text" id="string-input" placeholder="Enter text to hash..." value="Hello, XzalgoChain!">
+                </div>
+                <button id="hash-string-btn" class="btn primary">Generate Hash</button>
+                <div class="output-group">
+                    <label>Hash Output (320 bits / 40 bytes):</label>
+                    <div class="hash-output" id="string-hash-output">-</div>
+                </div>
+            </div>
+
+            <!-- Hash from file -->
+            <div class="card">
+                <h2>📁 Hash from File</h2>
+                <div class="input-group">
+                    <label for="file-input">Select File:</label>
+                    <input type="file" id="file-input">
+                </div>
+                <div id="file-info" class="file-info">No file selected</div>
+                <button id="hash-file-btn" class="btn primary" disabled>Generate Hash</button>
+                <div class="output-group">
+                    <label>Hash Output (320 bits / 40 bytes):</label>
+                    <div class="hash-output" id="file-hash-output">-</div>
+                </div>
+            </div>
+
+            <!-- Verify hash from string -->
+            <div class="card">
+                <h2>✅ Verify Hash from String</h2>
+                <div class="input-group">
+                    <label for="verify-string-input">Input String:</label>
+                    <input type="text" id="verify-string-input" placeholder="Enter text to verify..." value="Hello, XzalgoChain!">
+                </div>
+                <div class="input-group">
+                    <label for="verify-string-hash">Hash to Verify:</label>
+                    <input type="text" id="verify-string-hash" placeholder="Paste hash here...">
+                </div>
+                <button id="verify-string-btn" class="btn secondary">Verify</button>
+                <div class="verify-result" id="verify-string-result"></div>
+            </div>
+
+            <!-- Verify hash from file -->
+            <div class="card">
+                <h2>✅ Verify Hash from File</h2>
+                <div class="input-group">
+                    <label for="verify-file-input">Select File:</label>
+                    <input type="file" id="verify-file-input">
+                </div>
+                <div id="verify-file-info" class="file-info">No file selected</div>
+                <div class="input-group">
+                    <label for="verify-file-hash">Hash to Verify:</label>
+                    <input type="text" id="verify-file-hash" placeholder="Paste hash here...">
+                </div>
+                <button id="verify-file-btn" class="btn secondary" disabled>Verify</button>
+                <div class="verify-result" id="verify-file-result"></div>
+            </div>
+        </div>
+
+        <!-- Recent hashes -->
+        <div class="recent-hashes">
+            <h3>📋 Recent Hashes</h3>
+            <div id="recent-list" class="recent-list">
+                <div class="recent-empty">No hashes generated yet</div>
+            </div>
+            <button id="clear-recent" class="btn small">Clear History</button>
+        </div>
+
+        <footer>
+            <div class="footer-content">
+                <p>Created by <strong>Xzrayツ</strong></p>
+                <p>Email: <a href="mailto:Xzray@proton.me">Xzray@proton.me</a></p>
+                <p>GitHub: <a href="https://github.com/Xzray03/XzalgoChain" target="_blank">https://github.com/Xzray03/XzalgoChain</a></p>
+                <p class="copyright">Copyright 2026 Xzrayツ (Apache 2.0)</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="wasm/XzalgoChain.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
