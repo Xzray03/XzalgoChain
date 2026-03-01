@@ -85,7 +85,7 @@ xzalgochain_final(&ctx, hash);
 bash wasm-build.sh
 # The results will be in wasm/
 # Read wasm/README.md for how to use
-# Try wasm-demo for demos
+# Try wasm-demo for demos or visit https://xzray03.github.io/XzalgoChain/wasm-demo/
 ```
 
 ## Performance
@@ -120,9 +120,12 @@ XzalgoChain
 ├── logo.svg                            # XzalgoChain project logo
 ├── CMakeLists.txt                      # Static and shared library build system
 ├── Makefile                            # Main build system
+├── wasm-build.sh                       # WASM build system
 ├── NOTICE                              # Legal notices and attributions
 ├── README.md                           # Main project documentation (This file)
 ├── TEST.md                             # Test results and documentation
+│
+├── wasm-demo/                          # Demos for WASM
 │
 ├── tests/                              # Complete test suite
 │   ├── Makefile                        # Tests-specific build system
@@ -142,6 +145,7 @@ XzalgoChain
 │
 ├── xzalgo320sum.c                      # Command-line hashing utility
 ├── xzalgochain.c                       # Main point for the library
+├── xzalgochain_wasm.c                  # Wrapper for WASM
 │
 └── XzalgoChain/                        # Core header-only library
     ├── algorithm.h                     # Core cryptographic primitives
