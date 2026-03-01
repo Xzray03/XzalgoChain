@@ -80,6 +80,14 @@ xzalgochain_update(&ctx, data2, len2);
 xzalgochain_final(&ctx, hash);
 ```
 
+### Use it with WASM
+```bash
+bash wasm-build.sh
+# The results will be in wasm/
+# Read wasm/README.md for how to use
+# Try wasm-demo for demos
+```
+
 ## Performance
 
 XzalgoChain achieves high performance through:
