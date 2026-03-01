@@ -237,7 +237,7 @@ static void print_help(const char *prog) {
             prog_name = last_slash + 1;
     #endif
     
-    printf("XzalgoChain 320-bit hash utility (Version %.5s)\n\n", xzalgochain_version() + 12);
+    printf("XzalgoChain 320-bit hash utility (Version%.8s)\n\n", xzalgochain_version() + 11);
     printf("Platform: %s\n\n", get_platform_name());
     printf("Usage: %s [OPTIONS] [FILE]\n\n", prog_name);
 
