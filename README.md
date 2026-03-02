@@ -87,6 +87,7 @@ bash wasm-build.sh
 # Read wasm/README.md for how to use
 # Try wasm-demo for demos or visit https://xzray03.github.io/XzalgoChain/wasm-demo/
 ```
+See [INTEGRATION_WASM.md](INTEGRATION_WASM.md) for complete WASM examples.
 
 ## Performance
 
@@ -116,10 +117,12 @@ XzalgoChain
 ├── ALGORITHM.md                        # Complete cryptographic algorithm documentation
 ├── CONTRIBUTING.md                     # Developer contribution guidelines
 ├── INTEGRATION.md                      # Examples of integration into other languages
+├── INTEGRATION_WASM.md                 # Examples of integration into javascript or others using WASM
 ├── LICENSE                             # Project license (MIT/GPL/etc)
 ├── logo.svg                            # XzalgoChain project logo
 ├── CMakeLists.txt                      # Static and shared library build system
 ├── Makefile                            # Main build system
+├── Makefile.win                        # Main build system for windows
 ├── wasm-build.sh                       # WASM build system
 ├── NOTICE                              # Legal notices and attributions
 ├── README.md                           # Main project documentation (This file)
@@ -188,7 +191,7 @@ XzalgoChain
 | Linux (ARM64) | NEON | ✓ (TESTED) |
 | macOS (Intel) | AVX2 | ✓ |
 | macOS (Apple Silicon) | NEON | ✓ |
-| Windows (x64) | AVX2 | ✓ |
+| Windows (x64) | AVX2 | ✓ (TESTED) |
 | Windows (ARM64) | NEON | ✓ |
 | Android (ARM) | NEON | ✓ (TESTED) |
 | iOS | NEON | ✓ |
@@ -204,6 +207,17 @@ cd tests
 make
 
 sudo make install  # Optional
+```
+
+### Windows
+```bash
+Build with MinGW (Default)
+mingw32-make -f Makefile.win
+
+OR
+
+Build with MSVC
+nmake /f Makefile.win CC=cl
 ```
 
 ### Cross-compiling for ARM
@@ -370,7 +384,7 @@ Copyright 2026 Xzrayツ
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
+ create files
     http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
