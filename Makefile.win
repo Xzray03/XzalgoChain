@@ -1,0 +1,296 @@
+# XzalgoChain - 320-bit Cryptographic Hash Function
+# Makefile.win - Windows-specific build configuration (MinGW/MSVC)
+# Part of XzalgoChain project (Apache 2.0 License)
+
+# Compiler selection - default to gcc (MinGW)
+# Set CC=cl for Microsoft Visual C++ compiler
+CC = gcc
+
+# Directory containing the XzalgoChain header files
+XZALGO_DIR = XzalgoChain
+
+# Include paths for header files
+INCLUDES = -I$(XZALGO_DIR)
+
+# Target executable name (with .exe extension)
+TARGET = xzalgo320sum.exe
+
+# Source files to compile
+SOURCES = xzalgo320sum.c
+
+# Object files derived from source files
+OBJECTS = $(SOURCES:.c=.o)
+
+# Installation prefix (default: C:\Program Files)
+PREFIX = C:/Program Files/XzalgoChain
+
+# Detect Windows architecture
+PROCESSOR_ARCHITECTURE := $(PROCESSOR_ARCHITECTURE)
+PROCESSOR_IDENTIFIER := $(PROCESSOR_IDENTIFIER)
+
+# Base compiler flags for Windows
+CFLAGS = -Wall -Wextra -O3 -flto
+
+# Windows-specific defines and flags
+CFLAGS += -DWIN32 -D_WIN32 -DWIN32_LEAN_AND_MEAN
+CFLAGS += -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE
+
+# Linker flags for Windows
+LDFLAGS = -flto -static-libgcc -static-libstdc++
+
+# Libraries for Windows
+LIBS = -ladvapi32 -lcrypt32 -lws2_32
+
+# Architecture-specific optimizations
+ifdef PROCESSOR_ARCHITECTURE
+    ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+        # 64-bit Windows
+        CFLAGS += -m64 -D_WIN64
+        # CPU optimizations
+        CFLAGS += -march=native -mtune=native -mavx2 -mfma -maes -mpclmul -msse4.2
+    else ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+        # 32-bit Windows
+        CFLAGS += -m32
+        # Check for specific CPU features
+        ifneq (,$(findstring SSE4,$(PROCESSOR_IDENTIFIER)))
+            CFLAGS += -msse4.2 -mpclmul -maes
+        endif
+        ifneq (,$(findstring AVX2,$(PROCESSOR_IDENTIFIER)))
+            CFLAGS += -mavx2 -mfma
+        endif
+    else ifeq ($(PROCESSOR_ARCHITECTURE),ARM64)
+        # ARM64 Windows (Windows on ARM)
+        CFLAGS += -D_WIN64 -D_ARM64_
+        CFLAGS += -march=armv8.2-a+fp16+rcpc+dotprod
+    else ifeq ($(PROCESSOR_ARCHITECTURE),ARM)
+        # ARM32 Windows (Windows RT/Phone)
+        CFLAGS += -D_ARM_ -march=armv7-a -mfpu=neon
+    endif
+endif
+
+# Microsoft Visual C++ compiler specific settings
+ifeq ($(CC),cl)
+    # MSVC compiler flags
+    CFLAGS = /W3 /O2 /GL /MD /DWIN32 /D_WIN32 /DWIN32_LEAN_AND_MEAN
+    CFLAGS += /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE
+
+    # Architecture-specific MSVC flags
+    ifdef PROCESSOR_ARCHITECTURE
+        ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+            CFLAGS += /arch:AVX2
+        else ifeq ($(PROCESSOR_ARCHITECTURE),ARM64)
+            CFLAGS += /arch:ARM64
+        endif
+    endif
+
+    # MSVC linker flags
+    LDFLAGS = /LTCG /INCREMENTAL:NO
+
+    # Override compilation rules for MSVC
+    %.obj: %.c
+        $(CC) $(CFLAGS) $(INCLUDES) /c $< /Fo$@
+
+    # Override target linking for MSVC
+    $(TARGET): $(OBJECTS)
+        $(CC) $(OBJECTS) /Fe$@ $(LDFLAGS) advapi32.lib crypt32.lib ws2_32.lib
+
+# Debug mode configuration
+ifdef DEBUG
+    ifeq ($(CC),cl)
+        CFLAGS = /W3 /Od /Zi /MDd /DWIN32 /D_WIN32 /DDEBUG
+        LDFLAGS = /DEBUG
+    else
+        CFLAGS += -g -O0 -DDEBUG
+    endif
+else
+    ifeq ($(CC),cl)
+        CFLAGS += /DNDEBUG
+    else
+        CFLAGS += -DNDEBUG
+    endif
+endif
+
+# OpenMP detection and configuration
+ifndef NO_OMP
+    ifeq ($(CC),cl)
+        HAVE_OPENMP := $(shell echo int main\(\){} | cl /openmp /nologo /FeNUL /c 2>&1 | findstr /C:"80070002" >nul && echo no || echo yes)
+        ifeq ($(HAVE_OPENMP),yes)
+            CFLAGS += /openmp
+        endif
+    else
+        HAVE_OPENMP := $(shell echo "int main(){}" | $(CC) -fopenmp -x c - -o nul 2>&1 | findstr /C:"error" >nul && echo no || echo yes)
+        ifeq ($(HAVE_OPENMP),yes)
+            CFLAGS += -fopenmp
+            LDFLAGS += -fopenmp
+        endif
+    endif
+endif
+
+# Console mode (default)
+ifdef WINDOWS_APP
+    # Windows GUI application (no console)
+    ifeq ($(CC),cl)
+        LDFLAGS += /SUBSYSTEM:WINDOWS
+    else
+        LDFLAGS += -mwindows
+    endif
+else
+    # Console application
+    ifeq ($(CC),cl)
+        LDFLAGS += /SUBSYSTEM:CONSOLE
+    endif
+endif
+
+# UNICODE support
+ifdef UNICODE
+    CFLAGS += -DUNICODE -D_UNICODE
+endif
+
+# Windows XP compatibility
+ifdef XP_COMPAT
+    ifeq ($(CC),cl)
+        CFLAGS += /D_WIN32_WINNT=0x0501
+    else
+        CFLAGS += -D_WIN32_WINNT=0x0501
+    endif
+endif
+
+# Verbose output mode
+ifdef VERBOSE
+    CFLAGS += -DVERBOSE
+endif
+
+# Default target
+all: check-deps $(TARGET)
+	@echo ==========================================
+	@echo Build complete: $(TARGET)
+	@echo Platform: Windows $(PROCESSOR_ARCHITECTURE)
+ifdef HAVE_OPENMP
+	@echo OpenMP: Enabled
+else
+	@echo OpenMP: Disabled
+endif
+	@echo Running $(TARGET)...
+	@$(TARGET) -v
+	@$(MAKE) clean-obj
+
+# Compile C source files to object files (MinGW)
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+# Clean only object files, keep executable
+clean-obj:
+	@echo Cleaning object files...
+ifneq ($(CC),cl)
+	@del /Q $(OBJECTS) 2>nul || echo No object files to clean
+else
+	@del /Q $(OBJECTS) 2>nul || echo No object files to clean
+endif
+	@echo Clean complete
+
+# Full clean: remove both objects and executable
+clean: clean-obj
+	@del /Q $(TARGET) 2>nul || echo No executable to clean
+
+# Install the executable to the system
+install: $(TARGET)
+	@if not exist "$(PREFIX)\bin" mkdir "$(PREFIX)\bin"
+	@copy /Y $(TARGET) "$(PREFIX)\bin\"
+
+# Remove the installed executable
+uninstall:
+	@del /Q "$(PREFIX)\bin\$(TARGET)" 2>nul || echo File not found
+
+# Build variants
+debug: clean
+	$(MAKE) DEBUG=1 all
+
+profile: clean
+	$(MAKE) PROFILE=1 all
+
+tiny: clean
+	$(MAKE) TINY=1 all
+
+verbose: clean
+	$(MAKE) VERBOSE=1 all
+
+unicode: clean
+	$(MAKE) UNICODE=1 all
+
+# Build only (no cleanup or test run)
+build: $(TARGET)
+
+# Run the executable with version flag
+run: $(TARGET)
+	@$(TARGET) -v
+
+# Check if required dependencies exist before building
+check-deps:
+	@if not exist "$(XZALGO_DIR)" (echo $(XZALGO_DIR) not found! & exit /b 1)
+	@if not exist "$(XZALGO_DIR)\XzalgoChain.h" (echo XzalgoChain.h not found! & exit /b 1)
+	@echo Checking dependencies for Windows...
+
+# Run basic tests on the executable
+test: $(TARGET)
+	@echo Running tests on Windows...
+	@$(TARGET) -v
+	@$(TARGET) -h
+	@$(TARGET) -i "Hello World"
+
+# Display system and build configuration information
+info:
+	@echo ==========================================
+	@echo Windows Build Configuration
+	@echo ==========================================
+	@echo Processor Architecture: $(PROCESSOR_ARCHITECTURE)
+	@echo Processor Identifier: $(PROCESSOR_IDENTIFIER)
+	@echo Number of Processors: $(NUMBER_OF_PROCESSORS)
+	@echo OS: Windows $(shell ver)
+	@echo Compiler: $(CC)
+	@echo OpenMP: $(HAVE_OPENMP)
+	@echo CFLAGS: $(CFLAGS)
+	@echo LDFLAGS: $(LDFLAGS)
+	@echo LIBS: $(LIBS)
+	@echo ==========================================
+
+# Display help information
+help:
+	@echo ==========================================
+	@echo XzalgoChain Makefile.win - Windows Build System
+	@echo ==========================================
+	@echo.
+	@echo Main targets:
+	@echo   all                    - Default build
+	@echo   info                   - Show configuration
+	@echo   build                  - Build only
+	@echo   run                    - Run the program
+	@echo   test                   - Run tests
+	@echo   clean                  - Clean all
+	@echo   clean-obj              - Clean objects only
+	@echo   install                - Install to $(PREFIX)
+	@echo   uninstall              - Uninstall
+	@echo.
+	@echo Build variants:
+	@echo   debug                  - Debug build
+	@echo   profile                - Profile build
+	@echo   tiny                   - Size-optimized build
+	@echo   verbose                - Verbose build
+	@echo   unicode                - UNICODE build
+	@echo.
+	@echo Compiler selection:
+	@echo   make CC=gcc ...        - MinGW GCC (default)
+	@echo   make CC=cl ...         - Microsoft Visual C++
+	@echo.
+	@echo Options:
+	@echo   WINDOWS_APP=1          - GUI application (no console)
+	@echo   XP_COMPAT=1            - Windows XP compatibility
+	@echo   NO_OMP=1               - Disable OpenMP
+	@echo   UNICODE=1              - Enable UNICODE
+	@echo ==========================================
+
+# Declare phony targets
+.PHONY: all build run clean clean-obj install uninstall debug profile tiny verbose unicode
+.PHONY: test info help check-deps
+
+# Dependency: object files depend on the header file
+$(OBJECTS): $(XZALGO_DIR)/XzalgoChain.h
