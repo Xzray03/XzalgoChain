@@ -452,7 +452,7 @@ Output: e8154c62a6afde90685824f16e5e537358e9b53fda49260f5139c699e78534988ee922d1
 
 ### 1024-bit Block
 ```
-Input:  dd if=/dev/zero bs=128 count=1 2>/dev/null | ./xzalgo320sum (1024 bits of 0x00)
+Input:  python -c "import sys; sys.stdout.buffer.write(b'\x00'*128)" | ./xzalgo320sum (1024 bits of 0x00)
 Output: 456466f0dfcc7441605ebccfdf9e19f48c4e39e9cc3776362ec771b02b46540af658c63fe8c37775
 ```
 
