@@ -369,7 +369,7 @@ See [INTEGRATION.md](INTEGRATION.md) for complete examples.
 
 Contributions are welcome! Please ensure:
 - Code follows existing style
-- Tests pass (`make test`)
+- Tests pass (`cd tests && make && cd bin`)
 - New features include tests
 - Performance is maintained
 
