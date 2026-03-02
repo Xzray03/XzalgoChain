@@ -322,13 +322,13 @@ Describe any security considerations:
 ## Review Process
 
 ### Stage 1: Automated Checks
-- Builds on all supported platforms
+- Builds on all supported platforms (If possible)
 - All tests pass
 - No warnings
 - Code style compliance
 
 ### Stage 2: Code Review
-- At least two maintainers review
+- Reviewed by the maintainers
 - Focus on correctness and security
 - Verify output consistency
 - Check for undefined behavior
