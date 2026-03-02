@@ -452,8 +452,8 @@ Output: e8154c62a6afde90685824f16e5e537358e9b53fda49260f5139c699e78534988ee922d1
 
 ### 1024-bit Block
 ```
-Input:  (1024 bits of 0x00)
-Output: 80a1ea3b5bf88726e9a2c4ab2326e50eefb854152662cf207a051240d3027ffa2b517739ea873fda
+Input:  dd if=/dev/zero bs=128 count=1 2>/dev/null | ./xzalgo320sum (1024 bits of 0x00)
+Output: 456466f0dfcc7441605ebccfdf9e19f48c4e39e9cc3776362ec771b02b46540af658c63fe8c37775
 ```
 
 ## Implementation Notes
