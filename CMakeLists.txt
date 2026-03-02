@@ -380,6 +380,33 @@ endfunction()
 check_required_components(XzalgoChain)
 ")
 
+
+# ==================== COPY HEADERS TO BUILD DIRECTORY ====================
+
+if(XZALGOCHAIN_INSTALL_HEADERS)
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/XzalgoChain")
+
+    set(COPY_COUNT 0)
+    foreach(header ${XZALGOCHAIN_HEADERS})
+        get_filename_component(header_name ${header} NAME)
+        file(COPY ${header} DESTINATION "${CMAKE_BINARY_DIR}/include/XzalgoChain/")
+        math(EXPR COPY_COUNT "${COPY_COUNT} + 1")
+    endforeach()
+
+    message(STATUS "========================================")
+    message(STATUS "Headers copied to build directory")
+    message(STATUS "Source: ${XZALGOCHAIN_INCLUDE_DIR}")
+    message(STATUS "Destination: ${CMAKE_BINARY_DIR}/include/XzalgoChain")
+    message(STATUS "Files copied: ${COPY_COUNT}")
+    message(STATUS "========================================")
+
+    file(GLOB copied_files "${CMAKE_BINARY_DIR}/include/XzalgoChain/*.h")
+    list(LENGTH copied_files num_copied)
+    if(NOT num_copied EQUAL COPY_COUNT)
+        message(WARNING "Header copy may not be complete: ${num_copied}/${COPY_COUNT}")
+    endif()
+endif()
+
 # ==================== INSTALLATION ====================
 
 include(GNUInstallDirs)
