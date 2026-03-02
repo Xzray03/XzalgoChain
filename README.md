@@ -211,12 +211,10 @@ sudo make install  # Optional
 
 ### Windows
 ```bash
-Build with MinGW (Default)
+# Build with MinGW (Default)
 mingw32-make -f Makefile.win
 
-OR
-
-Build with MSVC
+# Build with MSVC
 nmake /f Makefile.win CC=cl
 ```
 
