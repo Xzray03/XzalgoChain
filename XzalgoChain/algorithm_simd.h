@@ -887,7 +887,7 @@ static inline void little_box_execute_simd(uint64_t *input,
     little_box_execute_simd_neon(input, salt_scalar, round_base, num_blocks);
     #else
     /* No SIMD available - use scalar with optional OpenMP parallelization */
-    #pragma omp for if(num_blocks > 4)
+    #pragma omp for
     for(size_t i = 0; i < num_blocks; i++) {
         little_box_execute_scalar(&input[i * 10],
                                   salt_scalar,
