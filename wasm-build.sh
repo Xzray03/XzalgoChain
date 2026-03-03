@@ -11,7 +11,6 @@ PROJECT_ROOT="${SCRIPT_DIR}"
 WASM_OUTPUT_DIR="${PROJECT_ROOT}/wasm"
 WASM_BUILD_DIR="${PROJECT_ROOT}/wasm_build"
 SOURCE_WASM_WRAPPER="${PROJECT_ROOT}/xzalgochain_wasm.c"
-XZALGOCHAIN_MAIN_SOURCE="${PROJECT_ROOT}/xzalgochain.c"
 XZALGOCHAIN_INCLUDE_DIR="${PROJECT_ROOT}/XzalgoChain"
 
 # Colors for output
@@ -41,10 +40,6 @@ if ! command -v emcc &> /dev/null; then
 fi
 
 # Check if source files exist
-if [ ! -f "${XZALGOCHAIN_MAIN_SOURCE}" ]; then
-    echo -e "${RED}Error: Main source file not found: ${XZALGOCHAIN_MAIN_SOURCE}${NC}"
-    exit 1
-fi
 
 if [ ! -f "${SOURCE_WASM_WRAPPER}" ]; then
     echo -e "${RED}Error: WASM wrapper source file not found: ${SOURCE_WASM_WRAPPER}${NC}"
@@ -134,22 +129,8 @@ fi
 
 echo -e "${GREEN}✓ Configuration complete${NC}\n"
 
-# ==================== COMPILE XZALGOCHAIN.C TO LLVM BITCODE ====================
-echo -e "${YELLOW}Step 1: Compiling xzalgochain.c to LLVM bitcode...${NC}"
-
-emcc "${XZALGOCHAIN_MAIN_SOURCE}" \
-    ${BASE_CFLAGS[@]} \
-    -c \
-    -o "${WASM_BUILD_DIR}/xzalgochain.bc"
-
-if [ $? -ne 0 ]; then
-    echo -e "${RED}✗ Failed to compile xzalgochain.c${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✓ xzalgochain.c compiled${NC}\n"
-
 # ==================== COMPILE WASM WRAPPER ====================
-echo -e "${YELLOW}Step 2: Compiling WASM wrapper...${NC}"
+echo -e "${YELLOW}Step 1: Compiling WASM wrapper...${NC}"
 
 emcc "${SOURCE_WASM_WRAPPER}" \
     ${BASE_CFLAGS[@]} \
@@ -163,10 +144,9 @@ fi
 echo -e "${GREEN}✓ WASM wrapper compiled${NC}\n"
 
 # ==================== LINK TO FINAL WASM ====================
-echo -e "${YELLOW}Step 3: Linking to final WebAssembly module...${NC}"
+echo -e "${YELLOW}Step 2: Linking to final WebAssembly module...${NC}"
 
 emcc \
-    "${WASM_BUILD_DIR}/xzalgochain.bc" \
     "${WASM_BUILD_DIR}/xzalgochain_wasm.bc" \
     ${BASE_LDFLAGS[@]} \
     -o "${WASM_OUTPUT_DIR}/XzalgoChain.js"
@@ -179,7 +159,7 @@ fi
 echo -e "${GREEN}✓ Linking complete${NC}\n"
 
 # ==================== VERIFY OUTPUT ====================
-echo -e "${YELLOW}Step 4: Verifying output...${NC}"
+echo -e "${YELLOW}Step 3: Verifying output...${NC}"
 
 if [ -f "${WASM_OUTPUT_DIR}/XzalgoChain.wasm" ] && [ -f "${WASM_OUTPUT_DIR}/XzalgoChain.js" ]; then
     echo -e "${GREEN}✓ Build successful!${NC}"
