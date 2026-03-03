@@ -381,3 +381,6 @@ All other functions return `void` and assume valid parameters. Null pointers are
 Hash output size: **40 bytes** (320 bits)  
 Block size: **128 bytes** (1024 bits)  
 Internal state: **320 bits** (5 × 64-bit words)
+
+
+Copyright 2026 Xzrayツ (Apache 2.0)
