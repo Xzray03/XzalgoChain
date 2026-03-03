@@ -115,6 +115,7 @@ See [ALGORITHM.md](ALGORITHM.md) for complete design documentation and [TEST.md]
 ```
 XzalgoChain
 ├── ALGORITHM.md                        # Complete cryptographic algorithm documentation
+├── API.md                              # Complete documentation of the existing API
 ├── CONTRIBUTING.md                     # Developer contribution guidelines
 ├── INTEGRATION.md                      # Examples of integration into other languages
 ├── INTEGRATION_WASM.md                 # Examples of integration into javascript or others using WASM
