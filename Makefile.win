@@ -102,6 +102,7 @@ ifdef DEBUG
     else
         CFLAGS += -g -O0 -DDEBUG
     endif
+endif
 else
     ifeq ($(CC),cl)
         CFLAGS += /DNDEBUG
