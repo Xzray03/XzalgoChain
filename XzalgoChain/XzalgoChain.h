@@ -52,11 +52,13 @@ static inline void little_box_execute_neon4(uint64_t *input, uint64_t salt_simd,
  * Main context structure for XzalgoChain hash computation
  * Holds all internal state during multi-part hashing
  */
+#include <stdalign.h>
+
 typedef struct {
     uint64_t h[5];                                                          /* Current hash state (5 x 64-bit = 320 bits) */
     uint64_t little_box_state[LITTLE_BOX_COUNT][LITTLE_BOX_PROCESSES];      /* State of each LITTLE box */
     uint64_t big_box_state[BIG_BOX_COUNT][5];                               /* State of each BIG box (5 words per box) */
-    uint8_t buffer[128];                                                    /* Input buffer for partial blocks (128 bytes) */
+    alignas(32) uint8_t buffer[128];                                        /* Input buffer for partial blocks (128 bytes) */
     size_t buffer_len;                                                      /* Number of bytes currently in buffer */
     uint64_t total_bits;                                                    /* Total bits processed (for padding) */
     uint8_t simd_type;                                                      /* Detected SIMD type for this context */
@@ -67,7 +69,7 @@ typedef struct {
 /**
  * Process a single 1024-bit (16 x 64-bit) block
  * Core compression function that updates the hash state
- * 
+ *
  * @param h Current hash state (5 words)
  * @param block Input block data (16 words)
  */
@@ -119,7 +121,7 @@ static inline void little_box_execute_scalar_adapter(uint64_t input[10],
  * Generate salt values from current hash state
  * Uses a combination of constants, rotations, and mixing to produce
  * unique salt values for each round
- * 
+ *
  * @param input Current hash state (5 words)
  * @param salt Output salt array (5 words)
  */
@@ -181,12 +183,20 @@ static inline uint64_t extra_mix(uint64_t x) {
     return x;
 }
 
+/**
+ * Securely overwrites memory contents to prevent sensitive data leakage.
+ */
+static inline void secure_wipe(void *v, size_t n) {
+    volatile unsigned char *p = (volatile unsigned char *)v;
+    while (n--) *p++ = 0;
+}
+
 /* ==================== LITTLE BOX COMPLETION CHECK ==================== */
 
 /**
  * Check if a LITTLE box has completed all its processes
  * All process outputs should be non-zero
- * 
+ *
  * @param lb LITTLE box state array
  * @return true if all processes are complete, false otherwise
  */
@@ -200,7 +210,7 @@ static inline bool little_box_complete(uint64_t lb[LITTLE_BOX_PROCESSES]) {
 /**
  * Execute a BIG box transformation
  * Processes all LITTLE boxes within a BIG box and updates state
- * 
+ *
  * @param ctx Hash context
  * @param box_index Index of the BIG box to execute
  * @param round_base Base round number for constant selection
@@ -232,22 +242,22 @@ static inline void big_box_execute(XzalgoChain_CTX *ctx, int box_index, uint64_t
     /* Process each LITTLE box */
     for (int lb=0; lb<LITTLE_BOX_COUNT; lb++) {
         uint64_t little_input[10];
-        
+
         /* Prepare input for LITTLE box: mix hash with salt and round constants */
         for (int i=0;i<5;i++) {
             little_input[i] = ctx->h[i] ^ salt[i];
             little_input[i+5] = ctx->h[i] ^ ROUND_CONSTANTS[(lb*10+i)&(ROUND_CONSTANTS_SIZE-1)];
         }
-        
+
         /* Create salt variation for this LITTLE box */
         uint64_t salt_variation = salt[lb%5] ^ ROUND_CONSTANTS[(lb * 10) & (ROUND_CONSTANTS_SIZE-1)];
-        
+
         /* Execute LITTLE box processing */
         executor(little_input, salt_variation, round_base + lb*10);
-        
+
         /* Update salt variation for next box */
         salt_variation = rotr64(salt_variation, 13) ^ rotl64(little_input[9], 23);
-        
+
         /* Store LITTLE box state */
         for (int i=0;i<LITTLE_BOX_PROCESSES;i++) ctx->little_box_state[lb][i] = little_input[i];
     }
@@ -259,7 +269,7 @@ static inline void big_box_execute(XzalgoChain_CTX *ctx, int box_index, uint64_t
             ctx->big_box_state[box_index][i] ^= ctx->little_box_state[lb][i*2];
             ctx->big_box_state[box_index][i] += ctx->little_box_state[lb][i*2+1];
         }
-        
+
         /* Apply gamma mixing to final BIG box state */
         ctx->big_box_state[box_index][i] = gamma_mix(
             ctx->big_box_state[box_index][i],
@@ -274,7 +284,7 @@ static inline void big_box_execute(XzalgoChain_CTX *ctx, int box_index, uint64_t
 /**
  * Initialize a new hash context
  * Sets initial hash values, clears state, and detects SIMD capabilities
- * 
+ *
  * @param ctx Context to initialize
  */
 static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
@@ -306,12 +316,12 @@ static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
         ctx->h[i] *= 0x9E3779B97F4A7C15ULL;
         ctx->h[i] ^= ctx->h[(i+2)%5];
     }
-    
+
     /* Clear all state arrays and buffer */
     memset(ctx->little_box_state,0,sizeof(ctx->little_box_state));
     memset(ctx->big_box_state,0,sizeof(ctx->big_box_state));
     memset(ctx->buffer,0,sizeof(ctx->buffer));
-    ctx->buffer_len=0; 
+    ctx->buffer_len=0;
     ctx->total_bits=0;
 }
 
@@ -320,14 +330,14 @@ static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
 /**
  * Update hash context with additional data
  * Processes data in 128-byte blocks, buffering partial blocks
- * 
+ *
  * @param ctx Hash context
  * @param data Input data bytes
  * @param len Length of input data
  */
-static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *data, size_t len) {
+static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *__restrict__ data, size_t len) {
     if (!ctx||!data||len==0) return;
-    
+
     /* Update total bits processed */
     ctx->total_bits += len*8;
     size_t offset=0;
@@ -336,12 +346,12 @@ static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *data,
     if (ctx->buffer_len>0) {
         size_t copy_len = len < (128-ctx->buffer_len) ? len : (128-ctx->buffer_len);
         memcpy(ctx->buffer+ctx->buffer_len, data, copy_len);
-        ctx->buffer_len += copy_len; 
+        ctx->buffer_len += copy_len;
         offset += copy_len;
-        
+
         /* If buffer is full, process as block */
         if (ctx->buffer_len==128) {
-            uint64_t block[16]; 
+            uint64_t block[16];
             for(int i=0;i<16;i++) block[i]=bytes_to_u64(ctx->buffer+i*8);
             process_block(ctx->h, block);
             ctx->buffer_len=0;
@@ -350,16 +360,16 @@ static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *data,
 
     /* Process complete blocks directly from input */
     while (offset+128<=len) {
-        uint64_t block[16]; 
+        uint64_t block[16];
         for(int i=0;i<16;i++) block[i]=bytes_to_u64(data+offset+i*8);
-        process_block(ctx->h, block); 
+        process_block(ctx->h, block);
         offset+=128;
     }
 
     /* Store remaining data in buffer */
-    if (offset<len) { 
-        memcpy(ctx->buffer, data+offset, len-offset); 
-        ctx->buffer_len=len-offset; 
+    if (offset<len) {
+        memcpy(ctx->buffer, data+offset, len-offset);
+        ctx->buffer_len=len-offset;
     }
 }
 
@@ -368,7 +378,7 @@ static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *data,
 /**
  * Finalize hash computation and produce output
  * Applies padding, processes remaining data, and performs final mixing
- * 
+ *
  * @param ctx Hash context
  * @param output Output buffer (must be at least XZALGOCHAIN_HASH_SIZE bytes)
  */
@@ -376,20 +386,20 @@ static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGO
     if (!ctx||!output) return;
 
     /* Apply padding: add 0x80 byte followed by zeros */
-    ctx->buffer[ctx->buffer_len]=0x80; 
+    ctx->buffer[ctx->buffer_len]=0x80;
     ctx->buffer_len++;
     memset(ctx->buffer+ctx->buffer_len,0,128-ctx->buffer_len);
-    
+
     /* Process final block */
-    uint64_t block[16]; 
+    uint64_t block[16];
     for(int i=0;i<16;i++) block[i]=bytes_to_u64(ctx->buffer+i*8);
     process_block(ctx->h, block);
 
     /* Generate salt and execute BIG boxes */
-    uint64_t salt[5]; 
+    uint64_t salt[5];
     generate_salt((uint64_t*)ctx->h, salt);
 
-    for (int bb=0; bb<BIG_BOX_COUNT; bb++) 
+    for (int bb=0; bb<BIG_BOX_COUNT; bb++)
         big_box_execute(ctx, bb, bb*2000);
 
     /* Final mixing of hash state */
@@ -463,7 +473,7 @@ static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGO
 /**
  * Compute hash of a complete message in one call
  * Convenience function for simple use cases
- * 
+ *
  * @param data Input data bytes
  * @param len Length of input data
  * @param output Output buffer (must be at least XZALGOCHAIN_HASH_SIZE bytes)
@@ -475,7 +485,8 @@ static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[X
     xzalgochain_final(&ctx, output);
 
     /* Additional mixing on the output for dependency elimination */
-    uint64_t *out = (uint64_t*)output;
+    uint64_t out[5];
+    memcpy(out, output, sizeof(out));
     for (int mix = 0; mix < 3; mix++) {
         uint64_t acc = 0;
         for (int i = 0; i < 5; i++) {
@@ -490,7 +501,8 @@ static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[X
         u64_to_bytes(out[i], output + i*8);
 
     /* One more mixing pass on output */
-    uint64_t *out64 = (uint64_t*)output;
+    uint64_t out64[5];
+    memcpy(out64, output, sizeof(out64));
     for (int i = 0; i < 5; i++) {
         out64[i] = extra_mix(out64[i]);
         out64[i] ^= out64[(i+2)%5];
@@ -499,7 +511,7 @@ static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[X
     for (int i = 0; i < 5; i++)
         u64_to_bytes(out64[i], output + i*8);
 
-    memset(&ctx,0,sizeof(ctx));  /* Wipe context for security */
+    secure_wipe(&ctx, sizeof(ctx));  /* Wipe context for security */
 }
 
 /* ==================== CONTEXT MANAGEMENT ==================== */
@@ -507,15 +519,15 @@ static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[X
 /**
  * Reset context to initial state (same as re-initializing)
  */
-static inline void xzalgochain_ctx_reset(XzalgoChain_CTX *ctx){ 
-    if(ctx) xzalgochain_init(ctx); 
+static inline void xzalgochain_ctx_reset(XzalgoChain_CTX *ctx){
+    if(ctx) xzalgochain_init(ctx);
 }
 
 /**
  * Securely wipe context to clear sensitive data
  */
-static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){ 
-    if(ctx) memset(ctx,0,sizeof(XzalgoChain_CTX)); 
+static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){
+    if(ctx) secure_wipe(ctx, sizeof(XzalgoChain_CTX));
 }
 
 /* ==================== INFO ==================== */
@@ -534,8 +546,8 @@ static inline const char* xzalgochain_version(void)
 /**
  * Get platform information string
  */
-static inline const char* xzalgochain_platform_info(void){ 
-    return xzalgochain_get_platform_name(); 
+static inline const char* xzalgochain_platform_info(void){
+    return xzalgochain_get_platform_name();
 }
 
 /* ==================== FORCE SCALAR MODE ==================== */
