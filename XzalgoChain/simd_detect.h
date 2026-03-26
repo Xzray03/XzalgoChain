@@ -111,12 +111,12 @@ static inline int _detect_avx2_x86(void) {
     #if defined(__GNUC__) || defined(__clang__)
     unsigned int eax, ebx, ecx, edx;
     
-    /* Check maximum CPUID level first */
-    if (__get_cpuid_max(0, NULL) < 7)
-        return 0;  /* CPUID leaf 7 not supported */
-        
-        /* Query leaf 7, subleaf 0 for extended features */
-        __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    if (__get_cpuid_max(0, NULL) < 7) {
+    return 0;  /* CPUID leaf 7 not supported */
+    }
+
+    /* Query leaf 7, subleaf 0 for extended features */
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
     
     /* BIT_AVX2 (1 << 5) indicates AVX2 support in EBX */
     if (ebx & BIT_AVX2) {
