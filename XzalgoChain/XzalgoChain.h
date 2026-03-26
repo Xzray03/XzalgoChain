@@ -523,8 +523,14 @@ static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){
 /**
  * Get version string
  */
-static inline const char* xzalgochain_version(void){ 
-    return "XzalgoChain 0.0.1.2 - 320-bit";
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+static const char version_string[] =
+#include "../Version"
+    ;
+static inline const char* xzalgochain_version(void)
+{
+    return version_string;
 }
 
 /**
