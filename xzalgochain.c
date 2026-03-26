@@ -22,90 +22,90 @@
 
 #ifdef __cplusplus
 extern "C" {
-    #endif
+#endif
 
-    /* ==================== CORE HASH FUNCTION ==================== */
-    void xzalgochain_lib(const uint8_t *data, size_t len, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
-        XzalgoChain_CTX ctx;
-        xzalgochain_init(&ctx);
-        xzalgochain_update(&ctx, data, len);
-        xzalgochain_final(&ctx, output);
-        xzalgochain_ctx_wipe(&ctx);
-    }
+/* ==================== CORE HASH FUNCTION ==================== */
+void xzalgochain_lib(const uint8_t* data, size_t len, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
+    XzalgoChain_CTX ctx;
+    xzalgochain_init(&ctx);
+    xzalgochain_update(&ctx, data, len);
+    xzalgochain_final(&ctx, output);
+    xzalgochain_ctx_wipe(&ctx);
+}
 
-    /* ==================== CONTEXT MANAGEMENT ==================== */
-    void xzalgochain_init_lib(XzalgoChain_CTX *ctx) {
-        xzalgochain_init(ctx);
-    }
+/* ==================== CONTEXT MANAGEMENT ==================== */
+void xzalgochain_init_lib(XzalgoChain_CTX* ctx) {
+    xzalgochain_init(ctx);
+}
 
-    void xzalgochain_update_lib(XzalgoChain_CTX *ctx, const uint8_t *data, size_t len) {
-        xzalgochain_update(ctx, data, len);
-    }
+void xzalgochain_update_lib(XzalgoChain_CTX* ctx, const uint8_t* data, size_t len) {
+    xzalgochain_update(ctx, data, len);
+}
 
-    void xzalgochain_final_lib(XzalgoChain_CTX *ctx, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
-        xzalgochain_final(ctx, output);
-    }
+void xzalgochain_final_lib(XzalgoChain_CTX* ctx, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
+    xzalgochain_final(ctx, output);
+}
 
-    void xzalgochain_ctx_reset_lib(XzalgoChain_CTX *ctx) {
-        xzalgochain_ctx_reset(ctx);
-    }
+void xzalgochain_ctx_reset_lib(XzalgoChain_CTX* ctx) {
+    xzalgochain_ctx_reset(ctx);
+}
 
-    void xzalgochain_ctx_wipe_lib(XzalgoChain_CTX *ctx) {
-        xzalgochain_ctx_wipe(ctx);
-    }
+void xzalgochain_ctx_wipe_lib(XzalgoChain_CTX* ctx) {
+    xzalgochain_ctx_wipe(ctx);
+}
 
-    /* ==================== UTILITY FUNCTIONS ==================== */
-    void xzalgochain_copy_lib(uint8_t *dst, const uint8_t *src) {
-        xzalgochain_copy(dst, src);
-    }
+/* ==================== UTILITY FUNCTIONS ==================== */
+void xzalgochain_copy_lib(uint8_t* dst, const uint8_t* src) {
+    xzalgochain_copy(dst, src);
+}
 
-    int xzalgochain_equals_lib(const uint8_t *h1, const uint8_t *h2) {
-        return xzalgochain_equals(h1, h2);
-    }
+int xzalgochain_equals_lib(const uint8_t* h1, const uint8_t* h2) {
+    return xzalgochain_equals(h1, h2);
+}
 
-    /* ==================== INFO FUNCTIONS ==================== */
-    const char* xzalgochain_version_lib(void) {
-        return xzalgochain_version();
-    }
+/* ==================== INFO FUNCTIONS ==================== */
+const char* xzalgochain_version_lib(void) {
+    return xzalgochain_version();
+}
 
-    const char* xzalgochain_platform_info_lib(void) {
-        return xzalgochain_platform_info();
-    }
+const char* xzalgochain_platform_info_lib(void) {
+    return xzalgochain_platform_info();
+}
 
-    /* ==================== SIMD FUNCTIONS ==================== */
-    const char* xzalgochain_get_simd_name_lib(void) {
-        return xzalgochain_get_simd_name();
-    }
+/* ==================== SIMD FUNCTIONS ==================== */
+const char* xzalgochain_get_simd_name_lib(void) {
+    return xzalgochain_get_simd_name();
+}
 
-    int xzalgochain_get_simd_type_lib(void) {
-        return xzalgochain_get_simd_type();
-    }
+int xzalgochain_get_simd_type_lib(void) {
+    return xzalgochain_get_simd_type();
+}
 
-    int xzalgochain_avx2_supported_lib(void) {
-        #if defined(__AVX2__) && (defined(__x86_64__) || defined(__i386__))
-        return 1;
-        #else
-        return 0;
-        #endif
-    }
+int xzalgochain_avx2_supported_lib(void) {
+#if defined(__AVX2__) && (defined(__x86_64__) || defined(__i386__))
+    return 1;
+#else
+    return 0;
+#endif
+}
 
-    int xzalgochain_neon_supported_lib(void) {
-        #if defined(__ARM_NEON) && (defined(__arm__) || defined(__aarch64__))
-        return 1;
-        #else
-        return 0;
-        #endif
-    }
+int xzalgochain_neon_supported_lib(void) {
+#if defined(__ARM_NEON) && (defined(__arm__) || defined(__aarch64__))
+    return 1;
+#else
+    return 0;
+#endif
+}
 
-    /* ==================== FORCE SCALAR ==================== */
-    void xzalgochain_force_scalar_lib(int force) {
-        xzalgochain_force_scalar(force);
-    }
+/* ==================== FORCE SCALAR ==================== */
+void xzalgochain_force_scalar_lib(int force) {
+    xzalgochain_force_scalar(force);
+}
 
-    int xzalgochain_is_forced_scalar_lib(void) {
-        return xzalgochain_is_forced_scalar();
-    }
+int xzalgochain_is_forced_scalar_lib(void) {
+    return xzalgochain_is_forced_scalar();
+}
 
-    #ifdef __cplusplus
+#ifdef __cplusplus
 }
 #endif
