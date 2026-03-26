@@ -40,6 +40,7 @@
  * @param round Round constant/input
  * @return Mixed 64-bit output
  */
+static inline uint64_t gamma_mix(uint64_t x, uint64_t y, uint64_t z, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t gamma_mix(uint64_t x, uint64_t y, uint64_t z, uint64_t round) {
     /* Basic XOR mixing of inputs */
     uint64_t r = x ^ y ^ z;
@@ -79,6 +80,7 @@ static inline uint64_t gamma_mix(uint64_t x, uint64_t y, uint64_t z, uint64_t ro
  * @param v Variant selector (0-3) determining which transformation to apply
  * @return Transformed word
  */
+static inline uint64_t sigma_transform(uint64_t x, int v) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t sigma_transform(uint64_t x, int v) {
     switch (v) {
         case 0:
@@ -133,6 +135,7 @@ static inline uint64_t sigma_transform(uint64_t x, int v) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process1(uint64_t in, uint64_t salt, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process1(uint64_t in, uint64_t salt, uint64_t round) {
     return gamma_mix(in, salt, round, RC(round));
 }
@@ -145,6 +148,7 @@ static inline uint64_t little_box_process1(uint64_t in, uint64_t salt, uint64_t 
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process2(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process2(uint64_t x, uint64_t round) {
     /* XOR with rotated self for diffusion */
     x ^= rotr64(x, 19) ^ rotl64(x, 42);
@@ -162,6 +166,7 @@ static inline uint64_t little_box_process2(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process3(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process3(uint64_t x, uint64_t round) {
     /* Rotate left and right with different amounts */
     x = rotl64(x, 27) ^ rotr64(x, 31);
@@ -179,6 +184,7 @@ static inline uint64_t little_box_process3(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process4(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process4(uint64_t x, uint64_t round) {
     /* Mix using combined shift and rotation */
     x ^= (x << 23) | (x >> 41);
@@ -196,6 +202,7 @@ static inline uint64_t little_box_process4(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process5(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process5(uint64_t x, uint64_t round) {
     /* Multiply by maximum 64-bit value (0xFFFFFFFFFFFFFFFF)
      * This is equivalent to computing x * (2^64 - 1)
@@ -218,6 +225,7 @@ static inline uint64_t little_box_process5(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process6(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process6(uint64_t x, uint64_t round) {
     /* XOR with rotated self (different rotation amounts) */
     x ^= rotl64(x, 37) ^ rotr64(x, 29);
@@ -236,6 +244,7 @@ static inline uint64_t little_box_process6(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process7(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process7(uint64_t x, uint64_t round) {
     /* Mix using shift right and left with different amounts */
     x ^= (x >> 17) ^ (x << 47);
@@ -254,6 +263,7 @@ static inline uint64_t little_box_process7(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process8(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process8(uint64_t x, uint64_t round) {
     /* XOR with rotated self (rotation by 11 and 53) */
     x ^= rotr64(x, 11) ^ rotl64(x, 53);
@@ -272,6 +282,7 @@ static inline uint64_t little_box_process8(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Mixed output
  */
+static inline uint64_t little_box_process9(uint64_t x, uint64_t round) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t little_box_process9(uint64_t x, uint64_t round) {
     return gamma_mix(
         x,                       /* First input */
@@ -290,6 +301,7 @@ static inline uint64_t little_box_process9(uint64_t x, uint64_t round) {
  * @param round Current round number
  * @return Combined and mixed output
  */
+static inline uint64_t little_box_process10(uint64_t *d, uint64_t round) XZALGOCHAIN_ATTR_PURE;
 static inline uint64_t little_box_process10(uint64_t *d, uint64_t round) {
     uint64_t r = 0;
 
