@@ -523,8 +523,6 @@ static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){
 /**
  * Get version string
  */
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
 static const char version_string[] =
 #include "../Version"
     ;
