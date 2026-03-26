@@ -22,11 +22,11 @@
  * These are included to ensure all required types are available
  * throughout the XzalgoChain implementation
  */
-#include <stdint.h>   /* Fixed-width integer types (uint64_t, etc.) */
-#include <stdlib.h>   /* Standard library functions */
-#include <string.h>   /* Memory operations (memset, memcpy, etc.) */
-#include <stdbool.h>  /* Boolean type and true/false constants */
-#include <stddef.h>   /* Size_t and other definitions */
+#include <stdint.h>  /* Fixed-width integer types (uint64_t, etc.) */
+#include <stdlib.h>  /* Standard library functions */
+#include <string.h>  /* Memory operations (memset, memcpy, etc.) */
+#include <stdbool.h> /* Boolean type and true/false constants */
+#include <stddef.h>  /* Size_t and other definitions */
 
 /* ==================== CONSTANTS ==================== */
 
@@ -35,32 +35,32 @@
  * 320 bits = 40 bytes (320 / 8 = 40)
  * This constant defines the output length of the hash function
  */
-#define XZALGOCHAIN_HASH_SIZE   40     /* 320 bits = 40 bytes */
+#define XZALGOCHAIN_HASH_SIZE 40 /* 320 bits = 40 bytes */
 
 /**
  * LITTLE_BOX_COUNT: Number of LITTLE boxes per BIG box
  * Each LITTLE box represents a unit of cryptographic processing
  */
-#define LITTLE_BOX_COUNT        10     /* LITTLE boxes per BIG box */
+#define LITTLE_BOX_COUNT 10 /* LITTLE boxes per BIG box */
 
 /**
  * BIG_BOX_COUNT: Total number of BIG boxes in the algorithm
  * Each BIG box contains multiple LITTLE boxes
  */
-#define BIG_BOX_COUNT           5      /* BIG boxes total */
+#define BIG_BOX_COUNT 5 /* BIG boxes total */
 
 /**
  * LITTLE_BOX_PROCESSES: Number of processes per LITTLE box
  * Each process applies a specific transformation function
  */
-#define LITTLE_BOX_PROCESSES    10     /* Processes per LITTLE box */
+#define LITTLE_BOX_PROCESSES 10 /* Processes per LITTLE box */
 
 /**
  * ROUND_CONSTANTS_SIZE: Number of round constants available
  * 128 constants provide enough variety for many rounds
  * Using power of 2 (128) allows fast modulo with bitwise AND
  */
-#define ROUND_CONSTANTS_SIZE    128    /* Constants */
+#define ROUND_CONSTANTS_SIZE 128 /* Constants */
 
 /* ==================== SIMD TYPE CONSTANTS ==================== */
 
@@ -74,32 +74,32 @@
  * SIMD_NONE: No SIMD acceleration available or in use
  * Falls back to scalar implementation
  */
-#define SIMD_NONE    0
+#define SIMD_NONE 0
 
 /**
  * SIMD_AVX2: AVX2 (Advanced Vector Extensions 2) on x86/x64
  * Processes 4 64-bit values in parallel using 256-bit registers
  */
-#define SIMD_AVX2    1
-#define BIT_AVX2    (1 << 5)  /* Bit flag for AVX2 capability detection */
+#define SIMD_AVX2 1
+#define BIT_AVX2 (1 << 5) /* Bit flag for AVX2 capability detection */
 
 /**
  * SIMD_NEON: NEON SIMD on ARM architectures
  * On ARMv7, uses 128-bit registers (2x64-bit)
  * On ARM64, can use 128-bit registers efficiently
  */
-#define SIMD_NEON    2
-#define BIT_NEON    (1 << 6)  /* Bit flag for NEON capability detection */
+#define SIMD_NEON 2
+#define BIT_NEON (1 << 6) /* Bit flag for NEON capability detection */
 
 /* ==================== COMPILER ATTRIBUTES ==================== */
 
 /* Detect GCC or Clang for function attributes */
 #if defined(__GNUC__) || defined(__clang__)
-#define XZALGOCHAIN_ATTR_CONST __attribute__((const))
-#define XZALGOCHAIN_ATTR_PURE  __attribute__((pure))
+    #define XZALGOCHAIN_ATTR_CONST __attribute__((const))
+    #define XZALGOCHAIN_ATTR_PURE __attribute__((pure))
 #else
-#define XZALGOCHAIN_ATTR_CONST
-#define XZALGOCHAIN_ATTR_PURE
+    #define XZALGOCHAIN_ATTR_CONST
+    #define XZALGOCHAIN_ATTR_PURE
 #endif
 
 /* ==================== ROUND CONSTANTS ==================== */
@@ -110,19 +110,19 @@
  * - Nothing-up-my-sleeve numbers from well-known sources
  * - Good distribution of bits
  * - Resistance against rotational cryptanalysis
- * 
+ *
  * The constants include:
  * - First 64 constants: Derived from SHA-2 and SHA-3 round constants
  *   These are well-vetted cryptographic constants with proven properties
- * 
+ *
  * - Next 32 constants: Additional constants for extended rounds
  *   Selected to maintain good cryptographic properties
- * 
+ *
  * - Final 32 constants: Mix of various sources including:
  *   * Golden ratio and other irrational number approximations
  *   * ASCII values of meaningful strings
  *   * Additional carefully chosen values for optimal diffusion
- * 
+ *
  * The constants are indexed modulo ROUND_CONSTANTS_SIZE (128)
  * Using bitwise AND (index & 127) for fast modulo operation
  */
@@ -169,7 +169,6 @@ static const uint64_t ROUND_CONSTANTS[ROUND_CONSTANTS_SIZE] = {
     0xE38DEE4DB0FB0E4EULL, 0xB1C2D3E4F5061728ULL, 0xC1D2E3F405162738ULL, 0xD1E2F30415263748ULL,
     0xE1F2031425364758ULL, 0xF102132435465768ULL, 0xE58001F9E5CFFA7EULL, 0xD1AA379F9C4B9809ULL,
     0x993A2F8B88C1B63FULL, 0x579A01155E6D4196ULL, 0xBB0FC70B1266B3F1ULL, 0xDE509C2F03B01495ULL,
-    0x8859485125BC297CULL, 0x102B36560F6E68E6ULL, 0xE2D0C0A896B87C6EULL, 0x4F5E6A7B8C9DAFB1ULL
-};
+    0x8859485125BC297CULL, 0x102B36560F6E68E6ULL, 0xE2D0C0A896B87C6EULL, 0x4F5E6A7B8C9DAFB1ULL};
 
 #endif /* XZALGOCHAIN_CONFIG_H */
