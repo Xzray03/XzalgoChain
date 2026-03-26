@@ -91,6 +91,17 @@
 #define SIMD_NEON    2
 #define BIT_NEON    (1 << 6)  /* Bit flag for NEON capability detection */
 
+/* ==================== COMPILER ATTRIBUTES ==================== */
+
+/* Detect GCC or Clang for function attributes */
+#if defined(__GNUC__) || defined(__clang__)
+#define XZALGOCHAIN_ATTR_CONST __attribute__((const))
+#define XZALGOCHAIN_ATTR_PURE  __attribute__((pure))
+#else
+#define XZALGOCHAIN_ATTR_CONST
+#define XZALGOCHAIN_ATTR_PURE
+#endif
+
 /* ==================== ROUND CONSTANTS ==================== */
 
 /**
