@@ -32,8 +32,8 @@
 /* Android platform */
 #if defined(__ANDROID__)
     #define PLATFORM_ANDROID 1
-    #include <unistd.h>      /* POSIX operating system API */
-    #include <getopt.h>       /* Command-line option parsing */
+    #include <unistd.h> /* POSIX operating system API */
+    #include <getopt.h> /* Command-line option parsing */
 
 /* Linux platform */
 #elif defined(__linux__)
@@ -46,7 +46,7 @@
     #define PLATFORM_MACOS 1
     #include <unistd.h>
     #include <getopt.h>
-    #include <sys/param.h>    /* System parameters and limits */
+    #include <sys/param.h> /* System parameters and limits */
 
 /* FreeBSD platform */
 #elif defined(__FreeBSD__)
@@ -58,12 +58,12 @@
 /* Windows platform (various possible macros) */
 #elif defined(__WIN32__) || defined(_WIN32) || defined(WIN32)
     #define PLATFORM_WINDOWS 1
-    #define _CRT_SECURE_NO_WARNINGS  /* Disable Microsoft security warnings */
-    #include <windows.h>               /* Windows API */
-    #include <io.h>                     /* Low-level I/O functions */
-    #include <fcntl.h>                  /* File control options */
+    #define _CRT_SECURE_NO_WARNINGS /* Disable Microsoft security warnings */
+    #include <windows.h>            /* Windows API */
+    #include <io.h>                 /* Low-level I/O functions */
+    #include <fcntl.h>              /* File control options */
     #ifdef _MSC_VER
-        #include "getopt_win.h"         /* Windows-specific getopt for MSVC */
+        #include "getopt_win.h" /* Windows-specific getopt for MSVC */
     #else
         #include <unistd.h>
         #include <getopt.h>
@@ -88,75 +88,75 @@
  * using funopen (available in some Windows environments) or custom functions
  */
 #ifdef PLATFORM_WINDOWS
-    #define STDIN_FILENO 0  /* Standard input file descriptor number */
+    #define STDIN_FILENO 0 /* Standard input file descriptor number */
 
     #include <stdio.h>
-    
-    /* Memory stream structure for Windows fmemopen emulation */
-    typedef struct {
-        unsigned char *buffer;  /* Pointer to memory buffer */
-        size_t size;            /* Size of buffer */
-        size_t position;        /* Current read position */
-    } mem_stream_t;
-    
-    /* Read function for memory stream */
-    static int mem_stream_read(void *ctx, char *buf, int size) {
-        mem_stream_t *ms = (mem_stream_t *)ctx;
-        int bytes_to_read = size;
-        
-        /* Ensure we don't read beyond buffer bounds */
-        if (ms->position + bytes_to_read > ms->size)
-            bytes_to_read = ms->size - ms->position;
-        
-        if (bytes_to_read > 0) {
-            memcpy(buf, ms->buffer + ms->position, bytes_to_read);
-            ms->position += bytes_to_read;
-        }
-        
-        return bytes_to_read;
+
+/* Memory stream structure for Windows fmemopen emulation */
+typedef struct {
+    unsigned char* buffer; /* Pointer to memory buffer */
+    size_t size;           /* Size of buffer */
+    size_t position;       /* Current read position */
+} mem_stream_t;
+
+/* Read function for memory stream */
+static int mem_stream_read(void* ctx, char* buf, int size) {
+    mem_stream_t* ms = (mem_stream_t*) ctx;
+    int bytes_to_read = size;
+
+    /* Ensure we don't read beyond buffer bounds */
+    if (ms->position + bytes_to_read > ms->size)
+        bytes_to_read = ms->size - ms->position;
+
+    if (bytes_to_read > 0) {
+        memcpy(buf, ms->buffer + ms->position, bytes_to_read);
+        ms->position += bytes_to_read;
     }
-    
-    /* Seek function for memory stream */
-    static int mem_stream_seek(void *ctx, long offset, int whence) {
-        mem_stream_t *ms = (mem_stream_t *)ctx;
-        size_t new_pos;
-        
-        /* Calculate new position based on whence */
-        switch (whence) {
-            case SEEK_SET:
-                new_pos = offset;
-                break;
-            case SEEK_CUR:
-                new_pos = ms->position + offset;
-                break;
-            case SEEK_END:
-                new_pos = ms->size + offset;
-                break;
-            default:
-                return -1;
-        }
-        
-        /* Validate new position */
-        if (new_pos > ms->size)
+
+    return bytes_to_read;
+}
+
+/* Seek function for memory stream */
+static int mem_stream_seek(void* ctx, long offset, int whence) {
+    mem_stream_t* ms = (mem_stream_t*) ctx;
+    size_t new_pos;
+
+    /* Calculate new position based on whence */
+    switch (whence) {
+        case SEEK_SET:
+            new_pos = offset;
+            break;
+        case SEEK_CUR:
+            new_pos = ms->position + offset;
+            break;
+        case SEEK_END:
+            new_pos = ms->size + offset;
+            break;
+        default:
             return -1;
-        
-        ms->position = new_pos;
-        return 0;
     }
-    
-    /* Windows emulation of fmemopen using funopen */
-    static FILE *fmemopen_win(void *buf, size_t size, const char *mode) {
-        mem_stream_t *ms = (mem_stream_t *)malloc(sizeof(mem_stream_t));
-        if (!ms)
-            return NULL;
-        
-        ms->buffer = (unsigned char *)buf;
-        ms->size = size;
-        ms->position = 0;
-        
-        /* funopen creates a FILE stream from custom I/O functions */
-        return funopen(ms, mem_stream_read, NULL, mem_stream_seek, NULL);
-    }
+
+    /* Validate new position */
+    if (new_pos > ms->size)
+        return -1;
+
+    ms->position = new_pos;
+    return 0;
+}
+
+/* Windows emulation of fmemopen using funopen */
+static FILE* fmemopen_win(void* buf, size_t size, const char* mode) {
+    mem_stream_t* ms = (mem_stream_t*) malloc(sizeof(mem_stream_t));
+    if (!ms)
+        return NULL;
+
+    ms->buffer = (unsigned char*) buf;
+    ms->size = size;
+    ms->position = 0;
+
+    /* funopen creates a FILE stream from custom I/O functions */
+    return funopen(ms, mem_stream_read, NULL, mem_stream_seek, NULL);
+}
 #else
     /* For non-Windows platforms, use standard fmemopen from stdio.h */
     #include <stdio.h>
@@ -172,48 +172,48 @@
 #define BUFFER_SIZE 16384
 
 /* Global verbosity and quiet mode flags */
-static int verbose_mode = 0;  /* Enable detailed output */
-static int quiet_mode   = 0;  /* Suppress normal output */
+static int verbose_mode = 0; /* Enable detailed output */
+static int quiet_mode = 0;   /* Suppress normal output */
 
 /**
  * Get human-readable platform name based on detected macros
  * @return String containing platform name
  */
 static const char* get_platform_name(void) {
-    #if defined(PLATFORM_LINUX)
-        return "Linux";
-    #elif defined(PLATFORM_MACOS)
-        return "macOS";
-    #elif defined(PLATFORM_FREEBSD)
-        return "FreeBSD";
-    #elif defined(PLATFORM_ANDROID)
-        return "Android";
-    #elif defined(PLATFORM_IOS)
-        return "iOS";
-    #elif defined(PLATFORM_WINDOWS)
-        return "Windows";
-    #else
-        return "Unknown";
-    #endif
+#if defined(PLATFORM_LINUX)
+    return "Linux";
+#elif defined(PLATFORM_MACOS)
+    return "macOS";
+#elif defined(PLATFORM_FREEBSD)
+    return "FreeBSD";
+#elif defined(PLATFORM_ANDROID)
+    return "Android";
+#elif defined(PLATFORM_IOS)
+    return "iOS";
+#elif defined(PLATFORM_WINDOWS)
+    return "Windows";
+#else
+    return "Unknown";
+#endif
 }
 
 /**
  * Print brief usage information
  * @param prog Program name (argv[0])
  */
-static void print_usage(const char *prog) {
+static void print_usage(const char* prog) {
     /* Extract program name from full path */
-    const char *prog_name = prog;
-    #ifdef PLATFORM_WINDOWS
-        const char *last_slash = strrchr(prog, '\\');
-        if (last_slash)
-            prog_name = last_slash + 1;
-    #else
-        const char *last_slash = strrchr(prog, '/');
-        if (last_slash)
-            prog_name = last_slash + 1;
-    #endif
-    
+    const char* prog_name = prog;
+#ifdef PLATFORM_WINDOWS
+    const char* last_slash = strrchr(prog, '\\');
+    if (last_slash)
+        prog_name = last_slash + 1;
+#else
+    const char* last_slash = strrchr(prog, '/');
+    if (last_slash)
+        prog_name = last_slash + 1;
+#endif
+
     fprintf(stderr,
             "Usage: %s [OPTIONS] [FILE]\n"
             "Try '%s -h' for help.\n",
@@ -224,19 +224,19 @@ static void print_usage(const char *prog) {
  * Print detailed help information with usage examples
  * @param prog Program name (argv[0])
  */
-static void print_help(const char *prog) {
+static void print_help(const char* prog) {
     /* Extract program name from full path */
-    const char *prog_name = prog;
-    #ifdef PLATFORM_WINDOWS
-        const char *last_slash = strrchr(prog, '\\');
-        if (last_slash)
-            prog_name = last_slash + 1;
-    #else
-        const char *last_slash = strrchr(prog, '/');
-        if (last_slash)
-            prog_name = last_slash + 1;
-    #endif
-    
+    const char* prog_name = prog;
+#ifdef PLATFORM_WINDOWS
+    const char* last_slash = strrchr(prog, '\\');
+    if (last_slash)
+        prog_name = last_slash + 1;
+#else
+    const char* last_slash = strrchr(prog, '/');
+    if (last_slash)
+        prog_name = last_slash + 1;
+#endif
+
     printf("XzalgoChain 320-bit hash utility (Version%.8s)\n\n", xzalgochain_version() + 11);
     printf("Platform: %s\n\n", get_platform_name());
     printf("Usage: %s [OPTIONS] [FILE]\n\n", prog_name);
@@ -266,23 +266,23 @@ static void print_help(const char *prog) {
     printf("  The hash is computed over the exact byte stream received.\n\n");
 
     printf("  Examples:\n");
-    #ifdef PLATFORM_WINDOWS
-        printf("    echo Hello | %s\n", prog_name);
-        printf("    type file.txt | %s\n\n", prog_name);
-    #else
-        printf("    echo -n \"Hello\" | %s\n", prog_name);
-        printf("    printf \"Hello\" | %s\n", prog_name);
-        printf("    %s < file.txt\n", prog_name);
-        printf("    cat file.txt | %s\n\n", prog_name);
-    #endif
+#ifdef PLATFORM_WINDOWS
+    printf("    echo Hello | %s\n", prog_name);
+    printf("    type file.txt | %s\n\n", prog_name);
+#else
+    printf("    echo -n \"Hello\" | %s\n", prog_name);
+    printf("    printf \"Hello\" | %s\n", prog_name);
+    printf("    %s < file.txt\n", prog_name);
+    printf("    cat file.txt | %s\n\n", prog_name);
+#endif
 
     /* Important notes about input handling */
     printf("  Important:\n");
-    #ifdef PLATFORM_WINDOWS
-        printf("    'echo' in Windows always appends a newline (CR+LF).\n");
-    #else
-        printf("    'echo' without -n appends a newline (\\n).\n");
-    #endif
+#ifdef PLATFORM_WINDOWS
+    printf("    'echo' in Windows always appends a newline (CR+LF).\n");
+#else
+    printf("    'echo' without -n appends a newline (\\n).\n");
+#endif
     printf("    This changes the hashed bytes and therefore the result.\n");
     printf("    The utility never modifies input data.\n\n");
 
@@ -303,7 +303,7 @@ static void print_help(const char *prog) {
  */
 static void print_version(void) {
     int simd_type = xzalgochain_get_simd_type();
-    const char *simd_name = "None";
+    const char* simd_name = "None";
     int avx2_detected = 0;
     int neon_detected = 0;
     int force_seq = xzalgochain_is_forced_scalar();
@@ -346,7 +346,7 @@ static void print_version(void) {
  * Verbose output function (printf-style)
  * Only prints if verbose mode is enabled and quiet mode is disabled
  */
-static void verbose(const char *fmt, ...) {
+static void verbose(const char* fmt, ...) {
     if (verbose_mode && !quiet_mode) {
         va_list ap;
         va_start(ap, fmt);
@@ -362,10 +362,10 @@ static void verbose(const char *fmt, ...) {
  * @param hash Output buffer for computed hash (must be XZALGOCHAIN_HASH_SIZE bytes)
  * @return 0 on success, -1 on error
  */
-static int hash_stream(FILE *fp, const char *desc, uint8_t *hash) {
-    XzalgoChain_CTX ctx;          /* Hash context */
-    uint8_t buffer[BUFFER_SIZE];   /* Read buffer */
-    size_t total = 0;              /* Total bytes read (for verbose output) */
+static int hash_stream(FILE* fp, const char* desc, uint8_t* hash) {
+    XzalgoChain_CTX ctx;         /* Hash context */
+    uint8_t buffer[BUFFER_SIZE]; /* Read buffer */
+    size_t total = 0;            /* Total bytes read (for verbose output) */
 
     /* Initialize the hash context */
     xzalgochain_init(&ctx);
@@ -395,7 +395,7 @@ static int hash_stream(FILE *fp, const char *desc, uint8_t *hash) {
                 xzalgochain_ctx_wipe(&ctx);
                 return -1;
             }
-            break;  /* EOF reached */
+            break; /* EOF reached */
         }
     }
 
@@ -417,43 +417,42 @@ static int hash_stream(FILE *fp, const char *desc, uint8_t *hash) {
  * @param label_out Output parameter for input description
  * @return FILE pointer to read from, or NULL on error
  */
-static FILE *open_input_stream(const char *filename,
-                               const char *string_input,
-                               const char **label_out)
-{
+static FILE* open_input_stream(const char* filename,
+                               const char* string_input,
+                               const char** label_out) {
     /* String input mode */
     if (string_input) {
         *label_out = string_input;
 
-        /* Use fmemopen (or Windows emulation) to create stream from string */
-        #ifdef PLATFORM_WINDOWS
-        return fmemopen_win((void *)string_input,
+/* Use fmemopen (or Windows emulation) to create stream from string */
+#ifdef PLATFORM_WINDOWS
+        return fmemopen_win((void*) string_input,
                             strlen(string_input),
                             "rb");
-        #else
-        return fmemopen((void *)string_input,
+#else
+        return fmemopen((void*) string_input,
                         strlen(string_input),
                         "rb");
-        #endif
+#endif
     }
 
     /* File input mode */
     if (filename) {
-        /* Windows Unicode path support */
-        #ifdef PLATFORM_WINDOWS
+/* Windows Unicode path support */
+#ifdef PLATFORM_WINDOWS
         wchar_t wfilename[MAX_PATH];
         int wlen = MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, MAX_PATH);
         if (wlen > 0) {
-            FILE *fp = _wfopen(wfilename, L"rb");
+            FILE* fp = _wfopen(wfilename, L"rb");
             if (fp) {
                 *label_out = filename;
                 return fp;
             }
         }
-        #endif
+#endif
 
         /* Standard file open (fallback for Windows, primary for others) */
-        FILE *fp = fopen(filename, "rb");
+        FILE* fp = fopen(filename, "rb");
         if (!fp)
             return NULL;
         *label_out = filename;
@@ -463,10 +462,10 @@ static FILE *open_input_stream(const char *filename,
     /* Standard input mode */
     *label_out = "stdin";
 
-    #ifdef PLATFORM_WINDOWS
+#ifdef PLATFORM_WINDOWS
     /* Set stdin to binary mode on Windows to avoid CR/LF translation */
     _setmode(_fileno(stdin), _O_BINARY);
-    #endif
+#endif
 
     return stdin;
 }
@@ -476,7 +475,7 @@ static FILE *open_input_stream(const char *filename,
  * @param hash Hash bytes to print
  * @param label Input description (file, string, or stdin)
  */
-static void print_hash(const uint8_t *hash, const char *label) {
+static void print_hash(const uint8_t* hash, const char* label) {
     /* Print each byte as two hex digits */
     for (int i = 0; i < XZALGOCHAIN_HASH_SIZE; ++i)
         printf("%02x", hash[i]);
@@ -501,13 +500,13 @@ static void print_hash(const uint8_t *hash, const char *label) {
  * @param hash Output byte array (must be XZALGOCHAIN_HASH_SIZE bytes)
  * @return 0 on success, -1 on invalid format
  */
-static int parse_hash(const char *s, uint8_t *hash) {
+static int parse_hash(const char* s, uint8_t* hash) {
     size_t len = strlen(s);
-    
+
     /* Handle possible trailing newline */
-    if (len == XZALGOCHAIN_HASH_SIZE * 2 + 1 && (s[len-1] == '\n' || s[len-1] == '\r'))
+    if (len == XZALGOCHAIN_HASH_SIZE * 2 + 1 && (s[len - 1] == '\n' || s[len - 1] == '\r'))
         len--;
-    
+
     /* Validate length (should be exactly twice the hash size) */
     if (len != XZALGOCHAIN_HASH_SIZE * 2)
         return -1;
@@ -517,7 +516,7 @@ static int parse_hash(const char *s, uint8_t *hash) {
         unsigned int b;
         if (sscanf(s + (i * 2), "%02x", &b) != 1)
             return -1;
-        hash[i] = (uint8_t)b;
+        hash[i] = (uint8_t) b;
     }
 
     return 0;
@@ -525,10 +524,10 @@ static int parse_hash(const char *s, uint8_t *hash) {
 
 /* Windows getopt implementation (if not provided by compiler) */
 #ifdef PLATFORM_WINDOWS
-#ifndef HAVE_GETOPT
+    #ifndef HAVE_GETOPT
 int optind = 1;
 int optopt;
-char *optarg;
+char* optarg;
 
 /**
  * Simple getopt implementation for Windows
@@ -537,12 +536,12 @@ char *optarg;
  * @param optstring Option string (e.g., "i:c:qvVhf")
  * @return Option character, or -1 if done, or '?' on error
  */
-static int getopt_win(int argc, char * const argv[], const char *optstring) {
-    static char *nextchar = NULL;
-    
+static int getopt_win(int argc, char* const argv[], const char* optstring) {
+    static char* nextchar = NULL;
+
     if (optind >= argc)
         return -1;
-    
+
     if (nextchar == NULL || *nextchar == '\0') {
         nextchar = argv[optind];
         if (nextchar[0] != '-' || nextchar[1] == '\0') {
@@ -550,15 +549,15 @@ static int getopt_win(int argc, char * const argv[], const char *optstring) {
         }
         nextchar++;
     }
-    
+
     char opt = *nextchar++;
-    const char *pos = strchr(optstring, opt);
-    
+    const char* pos = strchr(optstring, opt);
+
     if (pos == NULL || opt == ':') {
         optopt = opt;
         return '?';
     }
-    
+
     if (pos[1] == ':') {
         if (*nextchar != '\0') {
             optarg = nextchar;
@@ -571,12 +570,12 @@ static int getopt_win(int argc, char * const argv[], const char *optstring) {
             return ':';
         }
     }
-    
+
     return opt;
 }
 
-#define getopt getopt_win
-#endif
+        #define getopt getopt_win
+    #endif
 #endif
 
 /**
@@ -585,27 +584,39 @@ static int getopt_win(int argc, char * const argv[], const char *optstring) {
  * @param argv Argument vector
  * @return 0 on success, non-zero on error
  */
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     int opt;
-    const char *check_str = NULL;    /* Hash to check against */
-    const char *string_input = NULL; /* String input mode */
-    const char *filename = NULL;      /* File input mode */
+    const char* check_str = NULL;    /* Hash to check against */
+    const char* string_input = NULL; /* String input mode */
+    const char* filename = NULL;     /* File input mode */
 
-    #ifdef PLATFORM_WINDOWS
-        /* Set stdout to binary mode on Windows to avoid output corruption */
-        _setmode(_fileno(stdout), _O_BINARY);
-    #endif
+#ifdef PLATFORM_WINDOWS
+    /* Set stdout to binary mode on Windows to avoid output corruption */
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
 
     /* Parse command-line options */
     while ((opt = getopt(argc, argv, "i:c:qvVhf")) != -1) {
         switch (opt) {
-            case 'i': string_input = optarg; break;  /* String input */
-            case 'c': check_str = optarg; break;     /* Check mode */
-            case 'q': quiet_mode = 1; break;          /* Quiet mode */
-            case 'v': print_version(); return 0;      /* Version info */
-            case 'V': verbose_mode = 1; break;        /* Verbose mode */
-            case 'h': print_help(argv[0]); return 0;  /* Help */
-            case 'f':                                   /* Force scalar mode */
+            case 'i':
+                string_input = optarg;
+                break; /* String input */
+            case 'c':
+                check_str = optarg;
+                break; /* Check mode */
+            case 'q':
+                quiet_mode = 1;
+                break; /* Quiet mode */
+            case 'v':
+                print_version();
+                return 0; /* Version info */
+            case 'V':
+                verbose_mode = 1;
+                break; /* Verbose mode */
+            case 'h':
+                print_help(argv[0]);
+                return 0; /* Help */
+            case 'f':     /* Force scalar mode */
                 xzalgochain_force_scalar(1);
                 if (verbose_mode) fprintf(stderr, "Force scalar mode enabled\n");
                 break;
@@ -627,8 +638,8 @@ int main(int argc, char **argv) {
     }
 
     /* Open input stream based on arguments */
-    const char *label = NULL;
-    FILE *input = open_input_stream(filename, string_input, &label);
+    const char* label = NULL;
+    FILE* input = open_input_stream(filename, string_input, &label);
 
     if (!input) {
         if (!quiet_mode)
