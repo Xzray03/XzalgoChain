@@ -37,6 +37,63 @@
 
 /* ==================== INTERNAL DETECTION FUNCTIONS ==================== */
 
+/* ==================== OS AVX SUPPORT DETECTION ==================== */
+
+/**
+ * Internal function to detect if OS supports AVX registers
+ * Checks OSXSAVE flag in CPUID and verifies XCR0 register
+ * This prevents crashes in virtualized environments where CPU claims
+ * AVX support but OS doesn't allow it.
+ * 
+ * @return 1 if OS supports AVX, 0 otherwise
+ */
+static inline int _detect_os_avx_support(void) {
+    #if defined(__i386__) || defined(__x86_64__)
+    unsigned int eax, ebx, ecx, edx;
+    
+    /* Check if OSXSAVE is enabled (bit 27 in ECX) via CPUID leaf 1 */
+    #if defined(__GNUC__) || defined(__clang__)
+    __cpuid_count(1, 0, eax, ebx, ecx, edx);
+    #elif defined(_MSC_VER)
+    int cpuInfo[4];
+    __cpuid(cpuInfo, 1);
+    ecx = cpuInfo[2];
+    #else
+    /* Generic inline assembly for CPUID leaf 1 */
+    __asm__ volatile ("cpuid"
+    : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+    : "a"(1), "c"(0));
+    #endif
+    
+    /* OSXSAVE bit (27) must be set */
+    if (!(ecx & (1 << 27))) {
+        return 0;
+    }
+    
+    /* Check XCR0 register using XGETBV instruction */
+    unsigned long long xcr0;
+    
+    #if defined(__GNUC__) || defined(__clang__)
+    /* GCC/Clang inline assembly for xgetbv */
+    __asm__ volatile ("xgetbv" : "=A" (xcr0) : "c" (0) : "%edx");
+    #elif defined(_MSC_VER)
+    #include <intrin.h>
+    xcr0 = _xgetbv(0);
+    #else
+    /* Unknown compiler, assume OS supports AVX (fallback) */
+    return 1;
+    #endif
+    
+    /* AVX requires both SSE (bit 1) and AVX (bit 2) bits in XCR0 */
+    /* Bits 1 and 2 must be set (0x6) */
+    return (xcr0 & 0x6) == 0x6;
+    
+    #else
+    /* Non-x86 platforms don't need this check */
+    return 1;
+    #endif
+}
+
 /**
  * Internal function to detect AVX2 support on x86/x64 platforms
  * Uses CPUID instruction to query processor features
@@ -57,12 +114,16 @@ static inline int _detect_avx2_x86(void) {
     /* Check maximum CPUID level first */
     if (__get_cpuid_max(0, NULL) < 7)
         return 0;  /* CPUID leaf 7 not supported */
-    
-    /* Query leaf 7, subleaf 0 for extended features */
-    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+        
+        /* Query leaf 7, subleaf 0 for extended features */
+        __cpuid_count(7, 0, eax, ebx, ecx, edx);
     
     /* BIT_AVX2 (1 << 5) indicates AVX2 support in EBX */
-    return (ebx & BIT_AVX2) != 0 ? 1 : 0;
+    if (ebx & BIT_AVX2) {
+        /* AVX2 is supported by CPU, now check OS support */
+        return _detect_os_avx_support();
+    }
+    return 0;
 
     /* Microsoft Visual C++ implementation */
     #elif defined(_MSC_VER)
@@ -75,7 +136,11 @@ static inline int _detect_avx2_x86(void) {
     
     /* Query leaf 7 using __cpuidex */
     __cpuidex(cpuInfo, 7, 0);
-    return (cpuInfo[1] & BIT_AVX2) != 0 ? 1 : 0;
+    if (cpuInfo[1] & BIT_AVX2) {
+        /* AVX2 supported by CPU, check OS support */
+        return _detect_os_avx_support();
+    }
+    return 0;
 
     #else
     /* Generic inline assembly implementation for compilers without built-ins */
@@ -136,9 +201,13 @@ static inline int _detect_avx2_x86(void) {
         : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
         : "a"(7), "c"(0)
     );
-
+    
     /* Check AVX2 bit (bit 5 in EBX) */
-    return (ebx & (1u << 5)) != 0 ? 1 : 0;
+    if (ebx & (1u << 5)) {
+        /* AVX2 supported by CPU, check OS support */
+        return _detect_os_avx_support();
+    }
+    return 0;
     #endif
 
     #else
