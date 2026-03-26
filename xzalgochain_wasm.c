@@ -22,52 +22,52 @@
 
 #ifdef __cplusplus
 extern "C" {
-    #endif
+#endif
 
-    /* ==================== CORE HASH FUNCTION ==================== */
-    void xzalgochain_wasm(const uint8_t *data, size_t len, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
-        XzalgoChain_CTX ctx;
-        xzalgochain_init(&ctx);
-        xzalgochain_update(&ctx, data, len);
-        xzalgochain_final(&ctx, output);
-        xzalgochain_ctx_wipe(&ctx);
-    }
+/* ==================== CORE HASH FUNCTION ==================== */
+void xzalgochain_wasm(const uint8_t* data, size_t len, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
+    XzalgoChain_CTX ctx;
+    xzalgochain_init(&ctx);
+    xzalgochain_update(&ctx, data, len);
+    xzalgochain_final(&ctx, output);
+    xzalgochain_ctx_wipe(&ctx);
+}
 
-    /* ==================== CONTEXT MANAGEMENT ==================== */
-    void xzalgochain_init_wasm(XzalgoChain_CTX *ctx) {
-        xzalgochain_init(ctx);
-    }
+/* ==================== CONTEXT MANAGEMENT ==================== */
+void xzalgochain_init_wasm(XzalgoChain_CTX* ctx) {
+    xzalgochain_init(ctx);
+}
 
-    void xzalgochain_update_wasm(XzalgoChain_CTX *ctx, const uint8_t *data, size_t len) {
-        xzalgochain_update(ctx, data, len);
-    }
+void xzalgochain_update_wasm(XzalgoChain_CTX* ctx, const uint8_t* data, size_t len) {
+    xzalgochain_update(ctx, data, len);
+}
 
-    void xzalgochain_final_wasm(XzalgoChain_CTX *ctx, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
-        xzalgochain_final(ctx, output);
-    }
+void xzalgochain_final_wasm(XzalgoChain_CTX* ctx, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
+    xzalgochain_final(ctx, output);
+}
 
-    void xzalgochain_ctx_reset_wasm(XzalgoChain_CTX *ctx) {
-        xzalgochain_ctx_reset(ctx);
-    }
+void xzalgochain_ctx_reset_wasm(XzalgoChain_CTX* ctx) {
+    xzalgochain_ctx_reset(ctx);
+}
 
-    void xzalgochain_ctx_wipe_wasm(XzalgoChain_CTX *ctx) {
-        xzalgochain_ctx_wipe(ctx);
-    }
+void xzalgochain_ctx_wipe_wasm(XzalgoChain_CTX* ctx) {
+    xzalgochain_ctx_wipe(ctx);
+}
 
-    /* ==================== UTILITY FUNCTIONS ==================== */
-    void xzalgochain_copy_wasm(uint8_t *dst, const uint8_t *src) {
-        xzalgochain_copy(dst, src);
-    }
+/* ==================== UTILITY FUNCTIONS ==================== */
+void xzalgochain_copy_wasm(uint8_t* dst, const uint8_t* src) {
+    xzalgochain_copy(dst, src);
+}
 
-    int xzalgochain_equals_wasm(const uint8_t *h1, const uint8_t *h2) {
-        return xzalgochain_equals(h1, h2);
-    }
+int xzalgochain_equals_wasm(const uint8_t* h1, const uint8_t* h2) {
+    return xzalgochain_equals(h1, h2);
+}
 
-    /* ==================== INFO FUNCTIONS ==================== */
-    const char* xzalgochain_version_wasm(void) {
-        return xzalgochain_version();
-    }
+/* ==================== INFO FUNCTIONS ==================== */
+const char* xzalgochain_version_wasm(void) {
+    return xzalgochain_version();
+}
 
-    #ifdef __cplusplus
+#ifdef __cplusplus
 }
 #endif
