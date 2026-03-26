@@ -45,7 +45,7 @@ static inline void xzalgochain_force_scalar(int force);
 static inline int xzalgochain_is_forced_scalar(void);
 
 #if defined(__ARM_NEON) && (defined(__arm__) || defined(__aarch64__))
-static inline void little_box_execute_neon4(uint64_t *input, uint64_t salt_simd, uint64_t round_base, size_t num_blocks);
+static inline void little_box_execute_neon4(uint64_t* input, uint64_t salt_simd, uint64_t round_base, size_t num_blocks);
 #endif
 
 /* ==================== STATE STRUCTURE ==================== */
@@ -55,13 +55,13 @@ static inline void little_box_execute_neon4(uint64_t *input, uint64_t salt_simd,
  * Holds all internal state during multi-part hashing
  */
 typedef struct {
-    uint64_t h[5];                                                          /* Current hash state (5 x 64-bit = 320 bits) */
-    uint64_t little_box_state[LITTLE_BOX_COUNT][LITTLE_BOX_PROCESSES];      /* State of each LITTLE box */
-    uint64_t big_box_state[BIG_BOX_COUNT][5];                               /* State of each BIG box (5 words per box) */
-    alignas(32) uint8_t buffer[128];                                        /* Input buffer for partial blocks (128 bytes) */
-    size_t buffer_len;                                                      /* Number of bytes currently in buffer */
-    uint64_t total_bits;                                                    /* Total bits processed (for padding) */
-    uint8_t simd_type;                                                      /* Detected SIMD type for this context */
+    uint64_t h[5];                                                     /* Current hash state (5 x 64-bit = 320 bits) */
+    uint64_t little_box_state[LITTLE_BOX_COUNT][LITTLE_BOX_PROCESSES]; /* State of each LITTLE box */
+    uint64_t big_box_state[BIG_BOX_COUNT][5];                          /* State of each BIG box (5 words per box) */
+    alignas(32) uint8_t buffer[128];                                   /* Input buffer for partial blocks (128 bytes) */
+    size_t buffer_len;                                                 /* Number of bytes currently in buffer */
+    uint64_t total_bits;                                               /* Total bits processed (for padding) */
+    uint8_t simd_type;                                                 /* Detected SIMD type for this context */
 } XzalgoChain_CTX;
 
 /* ==================== BLOCK TRANSFORMATION ==================== */
@@ -75,19 +75,27 @@ typedef struct {
  */
 static inline void process_block(uint64_t h[5], const uint64_t block[16]) {
     for (int i = 0; i < 5; i++) {
-        uint64_t a = h[i], b = block[i], c = block[i+5], d = block[i+10];
+        uint64_t a = h[i], b = block[i], c = block[i + 5], d = block[i + 10];
 
         /* ARX (Add-Rotate-XOR) operations with constants derived from SHA-2 initial values */
-        a += b ^ 0x6A09E667BB67AE85ULL; a = rotl64(a,13);
-        a ^= c + 0x3C6EF372A54FF53AULL; a = rotl64(a,29);
-        a += d ^ 0x510E527F9B05688CULL; a = rotl64(a,37);
+        a += b ^ 0x6A09E667BB67AE85ULL;
+        a = rotl64(a, 13);
+        a ^= c + 0x3C6EF372A54FF53AULL;
+        a = rotl64(a, 29);
+        a += d ^ 0x510E527F9B05688CULL;
+        a = rotl64(a, 37);
 
         /* Mix with neighboring hash words */
-        a ^= h[(i+1)%5]; a += h[(i+4)%5]; a = rotl64(a,17);
+        a ^= h[(i + 1) % 5];
+        a += h[(i + 4) % 5];
+        a = rotl64(a, 17);
 
         /* Additional diffusion and multiplication by carefully chosen constant */
-        a ^= a >> 32; a ^= a << 21; a *= 0x1F83D9AB5BE0CD19ULL;
-        a ^= a >> 29; a ^= a << 17;
+        a ^= a >> 32;
+        a ^= a << 21;
+        a *= 0x1F83D9AB5BE0CD19ULL;
+        a ^= a >> 29;
+        a ^= a << 17;
 
         h[i] = a;
     }
@@ -100,8 +108,8 @@ static inline void process_block(uint64_t h[5], const uint64_t block[16]) {
  * Wraps little_box_execute_simd to match scalar adapter signature
  */
 static inline void little_box_execute_simd_adapter(uint64_t input[10],
-                                                       uint64_t salt_simd,
-                                                       uint64_t round_base) {
+                                                   uint64_t salt_simd,
+                                                   uint64_t round_base) {
     little_box_execute_simd(input, salt_simd, round_base, 1);
 }
 
@@ -143,27 +151,28 @@ static inline void generate_salt(const uint64_t input[5], uint64_t salt[5]) {
         0x8367E295D4C1B8A3ULL, 0xF4E6D2C5B1A79860ULL,
         0x2B5D7C9F8E4A3617ULL, 0xC8D4E2F6B9A31750ULL,
         0x7E3F9A2C5D8B6419ULL, 0xA6D2F8C4E1B79530ULL,
-        0x4B7F9E2D5C8A6318ULL, 0xD5F2E7C4B9A16830ULL
-    };
+        0x4B7F9E2D5C8A6318ULL, 0xD5F2E7C4B9A16830ULL};
     uint64_t counter = 0;
 
     /* Mix input into salt array */
     for (int i = 0; i < 5; i++) s[i] ^= input[i];
 
     /* Multiple rounds of mixing with rotations and counter */
-    for (int round=0; round<7; round++) {
-        for (int j=0;j<32;j++) {
-            s[j] ^= rotl64(s[j], (j*7+round*3)%64) ^ rotr64(s[(j+3)&7], (j*5+round*2)%64);
+    for (int round = 0; round < 7; round++) {
+        for (int j = 0; j < 32; j++) {
+            s[j] ^= rotl64(s[j], (j * 7 + round * 3) % 64) ^ rotr64(s[(j + 3) & 7], (j * 5 + round * 2) % 64);
             s[j] += counter;
         }
-        counter += 0x7C5F8E4D3B2A6917ULL;  /* Increment counter with constant */
+        counter += 0x7C5F8E4D3B2A6917ULL; /* Increment counter with constant */
     }
 
     /* Final reduction to 5 salt words with additional mixing */
     for (int i = 0; i < 5; i++) {
-        uint64_t v = s[i] ^ s[(i+3)&7];
-        v ^= v >> 31; v *= 0x3A8F7E6D5C4B2918ULL;
-        v ^= v >> 29; v *= 0x276D9C5F8E3B41A2ULL;
+        uint64_t v = s[i] ^ s[(i + 3) & 7];
+        v ^= v >> 31;
+        v *= 0x3A8F7E6D5C4B2918ULL;
+        v ^= v >> 29;
+        v *= 0x276D9C5F8E3B41A2ULL;
         salt[i] = v;
     }
 }
@@ -186,8 +195,8 @@ static inline uint64_t extra_mix(uint64_t x) {
 /**
  * Securely overwrites memory contents to prevent sensitive data leakage.
  */
-static inline void secure_wipe(void *v, size_t n) {
-    volatile unsigned char *p = (volatile unsigned char *)v;
+static inline void secure_wipe(void* v, size_t n) {
+    volatile unsigned char* p = (volatile unsigned char*) v;
     while (n--) *p++ = 0;
 }
 
@@ -201,7 +210,8 @@ static inline void secure_wipe(void *v, size_t n) {
  * @return true if all processes are complete, false otherwise
  */
 static inline bool little_box_complete(uint64_t lb[LITTLE_BOX_PROCESSES]) {
-    for (int i = 0; i < LITTLE_BOX_PROCESSES; i++) if (lb[i] == 0) return false;
+    for (int i = 0; i < LITTLE_BOX_PROCESSES; i++)
+        if (lb[i] == 0) return false;
     return true;
 }
 
@@ -215,67 +225,67 @@ static inline bool little_box_complete(uint64_t lb[LITTLE_BOX_PROCESSES]) {
  * @param box_index Index of the BIG box to execute
  * @param round_base Base round number for constant selection
  */
-static inline void big_box_execute(XzalgoChain_CTX *ctx, int box_index, uint64_t round_base) {
+static inline void big_box_execute(XzalgoChain_CTX* ctx, int box_index, uint64_t round_base) {
     /* Select appropriate executor based on SIMD type */
     void (*executor)(uint64_t[10], uint64_t, uint64_t);
 
     if (ctx->simd_type == SIMD_AVX2) {
-        #if defined(__AVX2__) && (defined(__x86_64__) || defined(__i386__))
+#if defined(__AVX2__) && (defined(__x86_64__) || defined(__i386__))
         executor = little_box_execute_simd_adapter;
-        #else
+#else
         executor = little_box_execute_scalar_adapter;
-        #endif
+#endif
     } else if (ctx->simd_type == SIMD_NEON) {
-        #if defined(__ARM_NEON) && (defined(__arm__) || defined(__aarch64__))
+#if defined(__ARM_NEON) && (defined(__arm__) || defined(__aarch64__))
         executor = little_box_execute_simd_adapter;
-        #else
+#else
         executor = little_box_execute_scalar_adapter;
-        #endif
+#endif
     } else {
         executor = little_box_execute_scalar_adapter;
     }
 
     /* Generate salt from current hash state */
     uint64_t salt[5] = {0};
-    generate_salt((uint64_t*)ctx->h, salt);
+    generate_salt((uint64_t*) ctx->h, salt);
 
     /* Process each LITTLE box */
-    for (int lb=0; lb<LITTLE_BOX_COUNT; lb++) {
+    for (int lb = 0; lb < LITTLE_BOX_COUNT; lb++) {
         uint64_t little_input[10];
 
         /* Prepare input for LITTLE box: mix hash with salt and round constants */
-        for (int i=0;i<5;i++) {
+        for (int i = 0; i < 5; i++) {
             little_input[i] = ctx->h[i] ^ salt[i];
-            little_input[i+5] = ctx->h[i] ^ ROUND_CONSTANTS[(lb*10+i)&(ROUND_CONSTANTS_SIZE-1)];
+            little_input[i + 5] = ctx->h[i] ^ ROUND_CONSTANTS[(lb * 10 + i) & (ROUND_CONSTANTS_SIZE - 1)];
         }
 
         /* Create salt variation for this LITTLE box */
-        uint64_t salt_variation = salt[lb%5] ^ ROUND_CONSTANTS[(lb * 10) & (ROUND_CONSTANTS_SIZE-1)];
+        uint64_t salt_variation = salt[lb % 5] ^ ROUND_CONSTANTS[(lb * 10) & (ROUND_CONSTANTS_SIZE - 1)];
 
         /* Execute LITTLE box processing */
-        executor(little_input, salt_variation, round_base + lb*10);
+        executor(little_input, salt_variation, round_base + lb * 10);
 
         /* Update salt variation for next box */
         salt_variation = rotr64(salt_variation, 13) ^ rotl64(little_input[9], 23);
 
         /* Store LITTLE box state */
-        for (int i=0;i<LITTLE_BOX_PROCESSES;i++) ctx->little_box_state[lb][i] = little_input[i];
+        for (int i = 0; i < LITTLE_BOX_PROCESSES; i++) ctx->little_box_state[lb][i] = little_input[i];
     }
 
     /* Aggregate LITTLE box results into BIG box state */
-    for (int i=0;i<5;i++) {
-        ctx->big_box_state[box_index][i]=0;
-        for (int lb=0; lb<LITTLE_BOX_COUNT; lb++) {
-            ctx->big_box_state[box_index][i] ^= ctx->little_box_state[lb][i*2];
-            ctx->big_box_state[box_index][i] += ctx->little_box_state[lb][i*2+1];
+    for (int i = 0; i < 5; i++) {
+        ctx->big_box_state[box_index][i] = 0;
+        for (int lb = 0; lb < LITTLE_BOX_COUNT; lb++) {
+            ctx->big_box_state[box_index][i] ^= ctx->little_box_state[lb][i * 2];
+            ctx->big_box_state[box_index][i] += ctx->little_box_state[lb][i * 2 + 1];
         }
 
         /* Apply gamma mixing to final BIG box state */
         ctx->big_box_state[box_index][i] = gamma_mix(
             ctx->big_box_state[box_index][i],
             salt[i],
-            ROUND_CONSTANTS[(box_index*100+i)&(ROUND_CONSTANTS_SIZE-1)],
-            round_base+1000);
+            ROUND_CONSTANTS[(box_index * 100 + i) & (ROUND_CONSTANTS_SIZE - 1)],
+            round_base + 1000);
     }
 }
 
@@ -287,13 +297,13 @@ static inline void big_box_execute(XzalgoChain_CTX *ctx, int box_index, uint64_t
  *
  * @param ctx Context to initialize
  */
-static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
+static inline void xzalgochain_init(XzalgoChain_CTX* ctx) {
     if (!ctx) return;
 
     /* Detect SIMD type unless scalar mode is forced */
     if (!xzalgochain_is_forced_scalar()) {
         ctx->simd_type = xzalgochain_get_simd_type();
-        if (((uintptr_t)ctx->buffer % 32) != 0) {
+        if (((uintptr_t) ctx->buffer % 32) != 0) {
             ctx->simd_type = SIMD_NONE;
         }
     } else {
@@ -308,24 +318,24 @@ static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
     ctx->h[4] = 0x510E527F4D8C3A92ULL;
 
     /* Initialize with additional random value */
-    ctx->h[0] ^= 0x9E3779B97F4A7C15ULL;  /* Golden ratio */
+    ctx->h[0] ^= 0x9E3779B97F4A7C15ULL; /* Golden ratio */
     ctx->h[1] ^= 0xBF58476D1CE4E5B9ULL;
     ctx->h[2] ^= 0x94D049BB133111EBULL;
 
     /* Mix the initial values for pattern elimination */
     for (int i = 0; i < 5; i++) {
         ctx->h[i] ^= ROUND_CONSTANTS[i * 10];
-        ctx->h[i] = rotl64(ctx->h[i], 17 + i*7);
+        ctx->h[i] = rotl64(ctx->h[i], 17 + i * 7);
         ctx->h[i] *= 0x9E3779B97F4A7C15ULL;
-        ctx->h[i] ^= ctx->h[(i+2)%5];
+        ctx->h[i] ^= ctx->h[(i + 2) % 5];
     }
 
     /* Clear all state arrays and buffer */
-    memset(ctx->little_box_state,0,sizeof(ctx->little_box_state));
-    memset(ctx->big_box_state,0,sizeof(ctx->big_box_state));
-    memset(ctx->buffer,0,sizeof(ctx->buffer));
-    ctx->buffer_len=0;
-    ctx->total_bits=0;
+    memset(ctx->little_box_state, 0, sizeof(ctx->little_box_state));
+    memset(ctx->big_box_state, 0, sizeof(ctx->big_box_state));
+    memset(ctx->buffer, 0, sizeof(ctx->buffer));
+    ctx->buffer_len = 0;
+    ctx->total_bits = 0;
 }
 
 /* ==================== UPDATE ==================== */
@@ -338,58 +348,58 @@ static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
  * @param data Input data bytes
  * @param len Length of input data
  */
-static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *__restrict__ data, size_t len) {
-    if (!ctx||!data||len==0) return;
-    
+static inline void xzalgochain_update(XzalgoChain_CTX* ctx, const uint8_t* __restrict__ data, size_t len) {
+    if (!ctx || !data || len == 0) return;
+
     /* Check for overflow in total_bits */
     uint64_t bits_to_add;
-    
+
     /* Check if len * 8 would overflow 64-bit */
     if (len > UINT64_MAX / 8) {
         /* len is too large, saturate to max */
         bits_to_add = UINT64_MAX;
     } else {
-        bits_to_add = (uint64_t)len * 8;
+        bits_to_add = (uint64_t) len * 8;
     }
-    
+
     /* Check if adding bits_to_add would overflow total_bits */
     if (ctx->total_bits > UINT64_MAX - bits_to_add) {
         ctx->total_bits = UINT64_MAX;
     } else {
         ctx->total_bits += bits_to_add;
     }
-    
+
     /* Update total bits processed */
     size_t offset = 0;
 
     /* Handle existing data in buffer */
-    if (ctx->buffer_len>0) {
-        size_t copy_len = len < (128-ctx->buffer_len) ? len : (128-ctx->buffer_len);
-        memcpy(ctx->buffer+ctx->buffer_len, data, copy_len);
+    if (ctx->buffer_len > 0) {
+        size_t copy_len = len < (128 - ctx->buffer_len) ? len : (128 - ctx->buffer_len);
+        memcpy(ctx->buffer + ctx->buffer_len, data, copy_len);
         ctx->buffer_len += copy_len;
         offset += copy_len;
 
         /* If buffer is full, process as block */
-        if (ctx->buffer_len==128) {
+        if (ctx->buffer_len == 128) {
             uint64_t block[16];
-            for(int i=0;i<16;i++) block[i]=bytes_to_u64(ctx->buffer+i*8);
+            for (int i = 0; i < 16; i++) block[i] = bytes_to_u64(ctx->buffer + i * 8);
             process_block(ctx->h, block);
-            ctx->buffer_len=0;
+            ctx->buffer_len = 0;
         }
     }
 
     /* Process complete blocks directly from input */
-    while (offset+128<=len) {
+    while (offset + 128 <= len) {
         uint64_t block[16];
-        for(int i=0;i<16;i++) block[i]=bytes_to_u64(data+offset+i*8);
+        for (int i = 0; i < 16; i++) block[i] = bytes_to_u64(data + offset + i * 8);
         process_block(ctx->h, block);
-        offset+=128;
+        offset += 128;
     }
 
     /* Store remaining data in buffer */
-    if (offset<len) {
-        memcpy(ctx->buffer, data+offset, len-offset);
-        ctx->buffer_len=len-offset;
+    if (offset < len) {
+        memcpy(ctx->buffer, data + offset, len - offset);
+        ctx->buffer_len = len - offset;
     }
 }
 
@@ -402,25 +412,25 @@ static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *__res
  * @param ctx Hash context
  * @param output Output buffer (must be at least XZALGOCHAIN_HASH_SIZE bytes)
  */
-static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
-    if (!ctx||!output) return;
+static inline void xzalgochain_final(XzalgoChain_CTX* ctx, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
+    if (!ctx || !output) return;
 
     /* Apply padding: add 0x80 byte followed by zeros */
-    ctx->buffer[ctx->buffer_len]=0x80;
+    ctx->buffer[ctx->buffer_len] = 0x80;
     ctx->buffer_len++;
-    memset(ctx->buffer+ctx->buffer_len,0,128-ctx->buffer_len);
+    memset(ctx->buffer + ctx->buffer_len, 0, 128 - ctx->buffer_len);
 
     /* Process final block */
     uint64_t block[16];
-    for(int i=0;i<16;i++) block[i]=bytes_to_u64(ctx->buffer+i*8);
+    for (int i = 0; i < 16; i++) block[i] = bytes_to_u64(ctx->buffer + i * 8);
     process_block(ctx->h, block);
 
     /* Generate salt and execute BIG boxes */
     uint64_t salt[5];
-    generate_salt((uint64_t*)ctx->h, salt);
+    generate_salt((uint64_t*) ctx->h, salt);
 
-    for (int bb=0; bb<BIG_BOX_COUNT; bb++)
-        big_box_execute(ctx, bb, bb*2000);
+    for (int bb = 0; bb < BIG_BOX_COUNT; bb++)
+        big_box_execute(ctx, bb, bb * 2000);
 
     /* Final mixing of hash state */
     const uint8_t rot_params[5] = {31, 27, 33, 23, 29};
@@ -444,13 +454,13 @@ static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGO
         for (int bb = 0; bb < BIG_BOX_COUNT; bb++) {
             acc ^= ctx->big_box_state[bb][i];
             acc = rotr64(acc, 19) ^ rotl64(acc, 37);
-            acc += ctx->big_box_state[bb][(i+2)%5];
-            acc *= 0x9E3779B97F4A7C15ULL;   /* Golden ratio constant */
+            acc += ctx->big_box_state[bb][(i + 2) % 5];
+            acc *= 0x9E3779B97F4A7C15ULL; /* Golden ratio constant */
         }
         acc ^= acc >> 29;
-        acc *= 0xBF58476D1CE4E5B9ULL;       /* Constants from splitmix64 */
+        acc *= 0xBF58476D1CE4E5B9ULL; /* Constants from splitmix64 */
         acc ^= acc >> 27;
-        acc *= 0x94D049BB133111EBULL;       /* More splitmix64 constants */
+        acc *= 0x94D049BB133111EBULL; /* More splitmix64 constants */
         acc ^= acc >> 31;
         final_mix[i] = acc;
     }
@@ -461,7 +471,7 @@ static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGO
         for (int i = 0; i < 5; i++) {
             ctx->h[i] = extra_mix(ctx->h[i]);
             ctx->h[i] ^= ctx->big_box_state[round % BIG_BOX_COUNT][i];
-            ctx->h[i] = rotl64(ctx->h[i], 17 + round*5);
+            ctx->h[i] = rotl64(ctx->h[i], 17 + round * 5);
         }
     }
 
@@ -471,22 +481,22 @@ static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGO
         uint64_t mix = 0;
         for (int i = 0; i < 5; i++) {
             mix ^= ctx->h[i];
-            mix = rotl64(mix, 17) ^ ctx->h[(i+2)%5];
+            mix = rotl64(mix, 17) ^ ctx->h[(i + 2) % 5];
         }
 
         /* Feedback to all hash */
         for (int i = 0; i < 5; i++) {
             ctx->h[i] ^= rotl64(mix, i * 13);
             ctx->h[i] *= 0x9E3779B97F4A7C15ULL;
-            ctx->h[i] ^= ctx->h[(i+1)%5] >> (i*7 + 3);
-            ctx->h[i] = rotr64(ctx->h[i], 23 + i*5);
+            ctx->h[i] ^= ctx->h[(i + 1) % 5] >> (i * 7 + 3);
+            ctx->h[i] = rotr64(ctx->h[i], 23 + i * 5);
         }
     }
 
     /* Convert final hash state to bytes */
-    for (int i=0;i<5;i++)
-        u64_to_bytes(ctx->h[i], output+i*8);
-    
+    for (int i = 0; i < 5; i++)
+        u64_to_bytes(ctx->h[i], output + i * 8);
+
     secure_wipe(ctx->h, sizeof(ctx->h));
 }
 
@@ -500,7 +510,7 @@ static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGO
  * @param len Length of input data
  * @param output Output buffer (must be at least XZALGOCHAIN_HASH_SIZE bytes)
  */
-static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
+static inline void xzalgochain(const uint8_t* data, size_t len, uint8_t output[XZALGOCHAIN_HASH_SIZE]) {
     XzalgoChain_CTX ctx;
     xzalgochain_init(&ctx);
     xzalgochain_update(&ctx, data, len);
@@ -515,26 +525,26 @@ static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[X
             acc ^= out[i];
             out[i] = rotr64(out[i], 19) ^ rotl64(acc, 37);
             out[i] *= 0xBF58476D1CE4E5B9ULL;
-            out[i] ^= out[(i+2)%5] >> 27;
+            out[i] ^= out[(i + 2) % 5] >> 27;
         }
     }
     /* Convert back to bytes */
     for (int i = 0; i < 5; i++)
-        u64_to_bytes(out[i], output + i*8);
+        u64_to_bytes(out[i], output + i * 8);
 
     /* One more mixing pass on output */
     uint64_t out64[5];
     memcpy(out64, output, sizeof(out64));
     for (int i = 0; i < 5; i++) {
         out64[i] = extra_mix(out64[i]);
-        out64[i] ^= out64[(i+2)%5];
+        out64[i] ^= out64[(i + 2) % 5];
     }
     /* Convert back to bytes */
     for (int i = 0; i < 5; i++)
-        u64_to_bytes(out64[i], output + i*8);
+        u64_to_bytes(out64[i], output + i * 8);
 
-    atomic_thread_fence(memory_order_seq_cst);  // full barrier
-    secure_wipe(&ctx, sizeof(ctx));  /* Wipe context for security */
+    atomic_thread_fence(memory_order_seq_cst); // full barrier
+    secure_wipe(&ctx, sizeof(ctx));            /* Wipe context for security */
 }
 
 /* ==================== CONTEXT MANAGEMENT ==================== */
@@ -542,14 +552,14 @@ static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[X
 /**
  * Reset context to initial state (same as re-initializing)
  */
-static inline void xzalgochain_ctx_reset(XzalgoChain_CTX *ctx){
-    if(ctx) xzalgochain_init(ctx);
+static inline void xzalgochain_ctx_reset(XzalgoChain_CTX* ctx) {
+    if (ctx) xzalgochain_init(ctx);
 }
 
 /**
  * Securely wipe context to clear sensitive data
  */
-static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){
+static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX* ctx) {
     if (ctx) {
         atomic_thread_fence(memory_order_seq_cst);
         secure_wipe(ctx, sizeof(XzalgoChain_CTX));
@@ -564,15 +574,14 @@ static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){
 static const char version_string[] =
 #include "../Version"
     ;
-static inline const char* xzalgochain_version(void)
-{
+static inline const char* xzalgochain_version(void) {
     return version_string;
 }
 
 /**
  * Get platform information string
  */
-static inline const char* xzalgochain_platform_info(void){
+static inline const char* xzalgochain_platform_info(void) {
     return xzalgochain_get_platform_name();
 }
 
