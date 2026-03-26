@@ -3,7 +3,27 @@
 # Copyright 2026 Xzrayツ
 
 cmake_minimum_required(VERSION 3.10)
-project(XzalgoChain VERSION 0.0.1.2 LANGUAGES C)
+set(VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Version")
+set(PROJECT_VERSION "0.0.0.0") # Fallback
+
+if(EXISTS "${VERSION_FILE}")
+  file(READ "${VERSION_FILE}" VERSION_CONTENT)
+  string(REGEX MATCH "XzalgoChain (.*) -" _ "${VERSION_CONTENT}")
+  if(CMAKE_MATCH_1)
+    string(REGEX REPLACE "[^0-9.]" "" CLEAN_VERSION "${CMAKE_MATCH_1}")
+    string(REGEX REPLACE "^\\.+|\\.+$" "" CLEAN_VERSION "${CLEAN_VERSION}")
+    if(CLEAN_VERSION)
+      set(PROJECT_VERSION "${CLEAN_VERSION}")
+    endif()
+  endif()
+endif()
+
+project(
+  XzalgoChain
+  VERSION ${PROJECT_VERSION}
+  LANGUAGES C)
+
+message(STATUS "XzalgoChain version: ${PROJECT_VERSION}")
 
 include(CheckCCompilerFlag)
 
