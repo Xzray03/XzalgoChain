@@ -201,17 +201,29 @@ static inline void xzalgochain_copy(uint8_t *dst, const uint8_t *src) {
 }
 
 /**
- * Compare two XzalgoChain hashes for equality
- * Constant-time comparison is not required here as hash values
- * are not secrets (they're the output, not input)
- * 
- * @param h1 First hash value
- * @param h2 Second hash value
- * @return 1 if hashes are equal, 0 otherwise (also returns 0 if either pointer is NULL)
+ * Compares two XzalgoChain hash values for equality.
+ *
+ * This function performs a byte-by-byte comparison of two hash values,
+ * returning true only if all bytes match. The comparison is implemented
+ * using a constant-time algorithm (XOR + OR) to avoid timing side-channels,
+ * even though hash values are outputs rather than secrets. This defensive
+ * coding practice provides consistent timing regardless of whether the
+ * hashes match or where the first difference occurs.
+ *
+ * @param h1    First hash value (must point to XZALGOCHAIN_HASH_SIZE bytes)
+ * @param h2    Second hash value (must point to XZALGOCHAIN_HASH_SIZE bytes)
+ * @return      1 if hashes are equal and both pointers are non-NULL,
+ *              0 otherwise (including if either pointer is NULL)
  */
-static inline int xzalgochain_equals(const uint8_t *h1, const uint8_t *h2) {
-    return (h1 && h2) &&
-    (memcmp(h1, h2, XZALGOCHAIN_HASH_SIZE) == 0);
+static inline int xzalgochain_equals(const uint8_t* h1, const uint8_t* h2)
+{
+    if (!h1 || !h2)
+        return 0;
+    uint8_t diff = 0;
+    for (int i = 0; i < XZALGOCHAIN_HASH_SIZE; i++) {
+        diff |= (h1[i] ^ h2[i]);
+    }
+    return diff == 0;
 }
 
 #endif /* XZALGOCHAIN_UTILS_H */
