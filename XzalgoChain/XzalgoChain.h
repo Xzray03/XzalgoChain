@@ -355,12 +355,16 @@ static inline void xzalgochain_update(XzalgoChain_CTX* ctx, const uint8_t* __res
     uint64_t bits_to_add;
 
     /* Check if len * 8 would overflow 64-bit */
-    if (len > UINT64_MAX / 8) {
-        /* len is too large, saturate to max */
-        bits_to_add = UINT64_MAX;
-    } else {
-        bits_to_add = (uint64_t) len * 8;
-    }
+    #if defined(__wasm__) || defined(__wasm32__) || (SIZE_MAX <= UINT32_MAX)
+    /* 32-bit platform: size_t cannot exceed 32-bit, no overflow check needed */
+    bits_to_add = (uint64_t) len * 8;
+    #else
+        if (len > UINT64_MAX / 8) {
+            bits_to_add = UINT64_MAX;
+        } else {
+            bits_to_add = (uint64_t) len * 8;
+        }
+    #endif
 
     /* Check if adding bits_to_add would overflow total_bits */
     if (ctx->total_bits > UINT64_MAX - bits_to_add) {
