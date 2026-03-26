@@ -26,7 +26,7 @@
 
 /* OpenMP header for parallel processing support if enabled */
 #ifdef _OPENMP
-#include <omp.h>
+    #include <omp.h>
 #endif
 
 /* ==================== SCALAR IMPLEMENTATION ==================== */
@@ -65,7 +65,7 @@ static inline uint64_t rotr64_scalar(uint64_t v, int r) {
  * Macro to access round constants with circular indexing
  * Uses bitwise AND for fast modulo operation when ROUND_CONSTANTS_SIZE is power of 2
  */
-#define RC(b) (ROUND_CONSTANTS[(b) & (ROUND_CONSTANTS_SIZE-1)])
+#define RC(b) (ROUND_CONSTANTS[(b) & (ROUND_CONSTANTS_SIZE - 1)])
 
 /* ---------------- 256-bit VECTOR SCALAR ---------------- */
 
@@ -74,7 +74,7 @@ static inline uint64_t rotr64_scalar(uint64_t v, int r) {
  * This simulates SIMD vector operations using scalar code
  */
 typedef struct {
-    uint64_t lane[4];  /* Four 64-bit lanes forming a 256-bit vector */
+    uint64_t lane[4]; /* Four 64-bit lanes forming a 256-bit vector */
 } vec256_t;
 
 /**
@@ -155,7 +155,7 @@ static inline vec256_t vec256_rotr(vec256_t v, int r) {
  * bits 2-3: destination lane 1 source
  * bits 4-5: destination lane 2 source
  * bits 6-7: destination lane 3 source
- * 
+ *
  * @param v Input vector
  * @param imm Permutation pattern (8-bit value)
  * @return Vector with lanes permuted as specified
@@ -186,17 +186,17 @@ static inline vec256_t vec256_mul_const(vec256_t v, uint64_t c) {
 /**
  * Mix lanes within a vector to provide diffusion
  * Performs permutations and XORs to mix data between lanes
- * 
+ *
  * @param v Input vector
  * @return Mixed vector with cross-lane diffusion
  */
 static inline vec256_t mix_lanes_vector(vec256_t v) {
     /* Permute lanes: (1,0,3,2) - swap adjacent lane pairs */
-    vec256_t p0 = vec256_permute(v, 0x4E);  // (1,0,3,2)
+    vec256_t p0 = vec256_permute(v, 0x4E); // (1,0,3,2)
 
     /* Further permute: (2,3,0,1) - swap the pairs */
     vec256_t p1 = vec256_permute(p0, 0xB1); // (2,3,0,1)
-    
+
     /* XOR the two permuted versions */
     vec256_t x = vec256_xor(p0, p1);
 
@@ -211,7 +211,7 @@ static inline vec256_t mix_lanes_vector(vec256_t v) {
 /**
  * ARX (Add-Rotate-XOR) mixing function for vectors
  * Core mixing operation combining addition, rotation, XOR, and lane mixing
- * 
+ *
  * @param v Input vector to mix
  * @param salt Salt vector for additional entropy
  * @param rc Round constant vector
@@ -222,19 +222,19 @@ static inline vec256_t mix_lanes_vector(vec256_t v) {
 static inline vec256_t arx_mix_vector(vec256_t v, vec256_t salt, vec256_t rc, int r1, int r2) {
     /* Add salt for entropy injection */
     v = vec256_add(v, salt);
-    
+
     /* XOR with round constant */
     v = vec256_xor(v, rc);
-    
+
     /* Add rotated version of self (left rotation) */
     v = vec256_add(v, vec256_rotl(v, r1));
-    
+
     /* XOR with rotated version of self (right rotation) */
     v = vec256_xor(v, vec256_rotr(v, r2));
-    
+
     /* Mix lanes for cross-lane diffusion */
     v = mix_lanes_vector(v);
-    
+
     /* Multiply by carefully chosen constant for avalanche effect
      * 0x800000000000808AULL is selected for its cryptographic properties
      */
@@ -246,7 +246,7 @@ static inline vec256_t arx_mix_vector(vec256_t v, vec256_t salt, vec256_t rc, in
 /**
  * Reduce a 256-bit vector to a single 64-bit value
  * Combines all lanes through XOR, permutations, and final mixing
- * 
+ *
  * @param v Input vector
  * @return 64-bit hash value derived from all lanes
  */
@@ -293,135 +293,124 @@ static inline uint64_t horizontal_xor_vector(vec256_t v) {
  * Main execution function for scalar implementation
  * Processes blocks in parallel using OpenMP, simulating 256-bit vector operations
  * on groups of 4 blocks at a time
- * 
+ *
  * @param input Array of input blocks (each block is 10 64-bit words)
  * @param salt_scalar Salt value for this processing round
  * @param round_base Base round number for constant selection
  * @param num_blocks Total number of blocks to process
  */
-static inline void little_box_execute_scalar(uint64_t *input,
+static inline void little_box_execute_scalar(uint64_t* input,
                                              uint64_t salt_scalar,
                                              uint64_t round_base,
                                              size_t num_blocks) {
 
-    /* Initialize OpenMP parallel processing if available */
-    #ifdef _OPENMP
+/* Initialize OpenMP parallel processing if available */
+#ifdef _OPENMP
     int n_threads = omp_get_num_procs();
     omp_set_num_threads(n_threads);
-    #endif
+#endif
 
-    /* OpenMP parallel for loop - processes blocks in groups of 4
-     * schedule(static) ensures balanced distribution among threads
-     */
-    #pragma omp for schedule(static)
-    for(size_t blk = 0; blk < num_blocks; blk += 4) {
+/* OpenMP parallel for loop - processes blocks in groups of 4
+ * schedule(static) ensures balanced distribution among threads
+ */
+#pragma omp for schedule(static)
+    for (size_t blk = 0; blk < num_blocks; blk += 4) {
         /* Pointers to up to 4 blocks (handles edge cases with fewer blocks) */
-        uint64_t *in[4] = {NULL, NULL, NULL, NULL};
-        for(int i = 0; i < 4; i++) {
-            if(blk + i < num_blocks) in[i] = &input[(blk + i) * 10];
+        uint64_t* in[4] = {NULL, NULL, NULL, NULL};
+        for (int i = 0; i < 4; i++) {
+            if (blk + i < num_blocks) in[i] = &input[(blk + i) * 10];
         }
 
         /* Create vector of salt values (all lanes same) */
         vec256_t salt = vec256_set1(salt_scalar);
 
         /* Load v0 (words 1) from up to 4 blocks */
-        vec256_t v0  = vec256_set(
+        vec256_t v0 = vec256_set(
             in[0] ? in[0][1] : 0,
             in[1] ? in[1][1] : 0,
             in[2] ? in[2][1] : 0,
-            in[3] ? in[3][1] : 0
-        );
+            in[3] ? in[3][1] : 0);
 
         /* Load v0l (words 0) from up to 4 blocks */
         vec256_t v0l = vec256_set(
             in[0] ? in[0][0] : 0,
             in[1] ? in[1][0] : 0,
             in[2] ? in[2][0] : 0,
-            in[3] ? in[3][0] : 0
-        );
+            in[3] ? in[3][0] : 0);
 
         /* Load v1 (words 5) from up to 4 blocks */
-        vec256_t v1  = vec256_set(
+        vec256_t v1 = vec256_set(
             in[0] ? in[0][5] : 0,
             in[1] ? in[1][5] : 0,
             in[2] ? in[2][5] : 0,
-            in[3] ? in[3][5] : 0
-        );
+            in[3] ? in[3][5] : 0);
 
         /* Load v1l (words 4) from up to 4 blocks */
         vec256_t v1l = vec256_set(
             in[0] ? in[0][4] : 0,
             in[1] ? in[1][4] : 0,
             in[2] ? in[2][4] : 0,
-            in[3] ? in[3][4] : 0
-        );
+            in[3] ? in[3][4] : 0);
 
         /* Load v2 (words 9) from up to 4 blocks */
-        vec256_t v2  = vec256_set(
+        vec256_t v2 = vec256_set(
             in[0] ? in[0][9] : 0,
             in[1] ? in[1][9] : 0,
             in[2] ? in[2][9] : 0,
-            in[3] ? in[3][9] : 0
-        );
+            in[3] ? in[3][9] : 0);
 
         /* Load v2l (words 8) from up to 4 blocks */
         vec256_t v2l = vec256_set(
             in[0] ? in[0][8] : 0,
             in[1] ? in[1][8] : 0,
             in[2] ? in[2][8] : 0,
-            in[3] ? in[3][8] : 0
-        );
+            in[3] ? in[3][8] : 0);
 
         /* Load round constants for first set of rounds (rc0: rounds 0-3) */
         vec256_t rc0 = vec256_set(
-            ROUND_CONSTANTS[(round_base + 0) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 1) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 2) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 3) & (ROUND_CONSTANTS_SIZE-1)]
-        );
+            ROUND_CONSTANTS[(round_base + 0) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 1) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 2) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 3) & (ROUND_CONSTANTS_SIZE - 1)]);
 
         /* Load round constants for second set of rounds (rc1: rounds 4-7) */
         vec256_t rc1 = vec256_set(
-            ROUND_CONSTANTS[(round_base + 4) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 5) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 6) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 7) & (ROUND_CONSTANTS_SIZE-1)]
-        );
+            ROUND_CONSTANTS[(round_base + 4) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 5) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 6) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 7) & (ROUND_CONSTANTS_SIZE - 1)]);
 
         /* Load round constants for third set of rounds (rc2: rounds 8-11) */
         vec256_t rc2 = vec256_set(
-            ROUND_CONSTANTS[(round_base + 8) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 9) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 10) & (ROUND_CONSTANTS_SIZE-1)],
-            ROUND_CONSTANTS[(round_base + 11) & (ROUND_CONSTANTS_SIZE-1)]
-        );
+            ROUND_CONSTANTS[(round_base + 8) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 9) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 10) & (ROUND_CONSTANTS_SIZE - 1)],
+            ROUND_CONSTANTS[(round_base + 11) & (ROUND_CONSTANTS_SIZE - 1)]);
 
         /* Apply ARX mixing to all vectors */
-        v0  = arx_mix_vector(v0,  salt, rc0, 7, 13);
+        v0 = arx_mix_vector(v0, salt, rc0, 7, 13);
         v0l = arx_mix_vector(v0l, salt, rc0, 7, 13);
-        v1  = arx_mix_vector(v1,  salt, rc1, 11, 17);
+        v1 = arx_mix_vector(v1, salt, rc1, 11, 17);
         v1l = arx_mix_vector(v1l, salt, rc1, 11, 17);
-        v2  = arx_mix_vector(v2,  salt, rc2, 19, 23);
+        v2 = arx_mix_vector(v2, salt, rc2, 19, 23);
         v2l = arx_mix_vector(v2l, salt, rc2, 19, 23);
 
         /* Mix lanes for all vectors */
-        v0  = mix_lanes_vector(v0);
+        v0 = mix_lanes_vector(v0);
         v0l = mix_lanes_vector(v0l);
-        v1  = mix_lanes_vector(v1);
+        v1 = mix_lanes_vector(v1);
         v1l = mix_lanes_vector(v1l);
-        v2  = mix_lanes_vector(v2);
+        v2 = mix_lanes_vector(v2);
         v2l = mix_lanes_vector(v2l);
 
         /* Store results back to block 0 */
-        if(in[0]) {
+        if (in[0]) {
             /* Combine contributions from v0, v1, v2 using permutation 0x00 (all lane 0) */
             vec256_t acc0 = vec256_xor(
                 vec256_xor(
                     vec256_permute(v0, 0x00),
-                    vec256_permute(v1, 0x00)
-                ),
-                vec256_permute(v2, 0x00)
-            );
+                    vec256_permute(v1, 0x00)),
+                vec256_permute(v2, 0x00));
 
             in[0][0] = v0.lane[0];
             in[0][1] = v0.lane[1];
@@ -432,15 +421,13 @@ static inline void little_box_execute_scalar(uint64_t *input,
         }
 
         /* Store results back to block 1 */
-        if(in[1]) {
+        if (in[1]) {
             /* Combine contributions from v0, v1, v2 using permutation 0x55 (all lane 1) */
             vec256_t acc1 = vec256_xor(
                 vec256_xor(
                     vec256_permute(v0, 0x55),
-                    vec256_permute(v1, 0x55)
-                ),
-                vec256_permute(v2, 0x55)
-            );
+                    vec256_permute(v1, 0x55)),
+                vec256_permute(v2, 0x55));
 
             in[1][0] = v0.lane[2];
             in[1][1] = v0.lane[3];
@@ -451,15 +438,13 @@ static inline void little_box_execute_scalar(uint64_t *input,
         }
 
         /* Store results back to block 2 (using v0l/v1l/v2l) */
-        if(in[2]) {
+        if (in[2]) {
             /* Combine using permutation 0xAA (all lane 2) */
             vec256_t acc2 = vec256_xor(
                 vec256_xor(
                     vec256_permute(v0l, 0xAA),
-                    vec256_permute(v1l, 0xAA)
-                ),
-                vec256_permute(v2l, 0xAA)
-            );
+                    vec256_permute(v1l, 0xAA)),
+                vec256_permute(v2l, 0xAA));
 
             in[2][0] = v0l.lane[0];
             in[2][1] = v0l.lane[1];
@@ -470,15 +455,13 @@ static inline void little_box_execute_scalar(uint64_t *input,
         }
 
         /* Store results back to block 3 (using v0l/v1l/v2l) */
-        if(in[3]) {
+        if (in[3]) {
             /* Combine using permutation 0xFF (all lane 3) */
             vec256_t acc3 = vec256_xor(
                 vec256_xor(
                     vec256_permute(v0l, 0xFF),
-                    vec256_permute(v1l, 0xFF)
-                ),
-                vec256_permute(v2l, 0xFF)
-            );
+                    vec256_permute(v1l, 0xFF)),
+                vec256_permute(v2l, 0xFF));
 
             in[3][0] = v0l.lane[2];
             in[3][1] = v0l.lane[3];
@@ -489,18 +472,18 @@ static inline void little_box_execute_scalar(uint64_t *input,
         }
 
         /* Cross-block mixing if we processed a full group of 4 blocks */
-        if(blk + 3 < num_blocks) {
-            uint64_t *b0 = &input[(blk + 0) * 10];
-            uint64_t *b1 = &input[(blk + 1) * 10];
-            uint64_t *b2 = &input[(blk + 2) * 10];
-            uint64_t *b3 = &input[(blk + 3) * 10];
+        if (blk + 3 < num_blocks) {
+            uint64_t* b0 = &input[(blk + 0) * 10];
+            uint64_t* b1 = &input[(blk + 1) * 10];
+            uint64_t* b2 = &input[(blk + 2) * 10];
+            uint64_t* b3 = &input[(blk + 3) * 10];
 
             /* XOR all final words together */
             uint64_t mix = b0[9] ^ b1[9] ^ b2[9] ^ b3[9];
 
             /* Apply diffusion to the mixed value */
             mix = rotr64_scalar(mix, 17) ^ rotl64_scalar(mix, 43);
-            mix *= 0x9E3779B97F4A7C15ULL;  /* Golden ratio constant */
+            mix *= 0x9E3779B97F4A7C15ULL; /* Golden ratio constant */
 
             /* Feed back into each block with variations */
             b0[9] ^= mix;
