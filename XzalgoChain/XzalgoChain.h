@@ -28,6 +28,8 @@
 #include "algorithm.h"
 #include "algorithm_scalar.h"
 #include "algorithm_simd.h"
+#include <stdalign.h>
+#include <stdatomic.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,8 +54,6 @@ static inline void little_box_execute_neon4(uint64_t *input, uint64_t salt_simd,
  * Main context structure for XzalgoChain hash computation
  * Holds all internal state during multi-part hashing
  */
-#include <stdalign.h>
-
 typedef struct {
     uint64_t h[5];                                                          /* Current hash state (5 x 64-bit = 320 bits) */
     uint64_t little_box_state[LITTLE_BOX_COUNT][LITTLE_BOX_PROCESSES];      /* State of each LITTLE box */
@@ -304,7 +304,7 @@ static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
     ctx->h[3] = 0x3C6EF372D8B4F1A6ULL;
     ctx->h[4] = 0x510E527F4D8C3A92ULL;
 
-    /* Initialize dengan nilai acak tambahan */
+    /* Initialize with additional random value */
     ctx->h[0] ^= 0x9E3779B97F4A7C15ULL;  /* Golden ratio */
     ctx->h[1] ^= 0xBF58476D1CE4E5B9ULL;
     ctx->h[2] ^= 0x94D049BB133111EBULL;
@@ -337,10 +337,27 @@ static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
  */
 static inline void xzalgochain_update(XzalgoChain_CTX *ctx, const uint8_t *__restrict__ data, size_t len) {
     if (!ctx||!data||len==0) return;
-
+    
+    /* Check for overflow in total_bits */
+    uint64_t bits_to_add;
+    
+    /* Check if len * 8 would overflow 64-bit */
+    if (len > UINT64_MAX / 8) {
+        /* len is too large, saturate to max */
+        bits_to_add = UINT64_MAX;
+    } else {
+        bits_to_add = (uint64_t)len * 8;
+    }
+    
+    /* Check if adding bits_to_add would overflow total_bits */
+    if (ctx->total_bits > UINT64_MAX - bits_to_add) {
+        ctx->total_bits = UINT64_MAX;
+    } else {
+        ctx->total_bits += bits_to_add;
+    }
+    
     /* Update total bits processed */
-    ctx->total_bits += len*8;
-    size_t offset=0;
+    size_t offset = 0;
 
     /* Handle existing data in buffer */
     if (ctx->buffer_len>0) {
@@ -466,6 +483,8 @@ static inline void xzalgochain_final(XzalgoChain_CTX *ctx, uint8_t output[XZALGO
     /* Convert final hash state to bytes */
     for (int i=0;i<5;i++)
         u64_to_bytes(ctx->h[i], output+i*8);
+    
+    secure_wipe(ctx->h, sizeof(ctx->h));
 }
 
 /* ==================== SINGLE-SHOT HASH ==================== */
@@ -511,6 +530,7 @@ static inline void xzalgochain(const uint8_t *data, size_t len, uint8_t output[X
     for (int i = 0; i < 5; i++)
         u64_to_bytes(out64[i], output + i*8);
 
+    atomic_thread_fence(memory_order_seq_cst);  // full barrier
     secure_wipe(&ctx, sizeof(ctx));  /* Wipe context for security */
 }
 
@@ -527,7 +547,10 @@ static inline void xzalgochain_ctx_reset(XzalgoChain_CTX *ctx){
  * Securely wipe context to clear sensitive data
  */
 static inline void xzalgochain_ctx_wipe(XzalgoChain_CTX *ctx){
-    if(ctx) secure_wipe(ctx, sizeof(XzalgoChain_CTX));
+    if (ctx) {
+        atomic_thread_fence(memory_order_seq_cst);
+        secure_wipe(ctx, sizeof(XzalgoChain_CTX));
+    }
 }
 
 /* ==================== INFO ==================== */
@@ -571,7 +594,6 @@ static inline int xzalgochain_is_forced_scalar(void) {
 
 /* Use C11 atomics for thread-safe access */
 #else
-#include <stdatomic.h>
 static atomic_int _xz_force_scalar = 0;
 
 static inline void xzalgochain_force_scalar(int force) {
