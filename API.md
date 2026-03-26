@@ -134,7 +134,7 @@ Constant-time comparison of two hash values.
 ```c
 const char* xzalgochain_version(void);
 ```
-Returns version string: `"XzalgoChain 0.0.1.2 - 320-bit"`
+Returns version string: `"XzalgoChain {version now} - 320-bit"`
 
 ---
 
