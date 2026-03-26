@@ -29,10 +29,10 @@
  * cpuid.h provides CPUID instruction wrappers for GCC/clang
  */
 #if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
-#if defined(__GNUC__) || defined(__clang__)
-#include <immintrin.h>
-#include <cpuid.h>
-#endif
+    #if defined(__GNUC__) || defined(__clang__)
+        #include <immintrin.h>
+        #include <cpuid.h>
+    #endif
 #endif
 
 /* ==================== INTERNAL DETECTION FUNCTIONS ==================== */
@@ -44,13 +44,13 @@
  * Checks OSXSAVE flag in CPUID and verifies XCR0 register
  * This prevents crashes in virtualized environments where CPU claims
  * AVX support but OS doesn't allow it.
- * 
+ *
  * @return 1 if OS supports AVX, 0 otherwise
  */
 static inline int _detect_os_avx_support(void) {
-    #if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
     unsigned int eax, ebx, ecx, edx;
-    
+
     /* Check if OSXSAVE is enabled (bit 27 in ECX) via CPUID leaf 1 */
     #if defined(__GNUC__) || defined(__clang__)
     __cpuid_count(1, 0, eax, ebx, ecx, edx);
@@ -60,38 +60,38 @@ static inline int _detect_os_avx_support(void) {
     ecx = cpuInfo[2];
     #else
     /* Generic inline assembly for CPUID leaf 1 */
-    __asm__ volatile ("cpuid"
-    : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-    : "a"(1), "c"(0));
+    __asm__ volatile("cpuid"
+                     : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+                     : "a"(1), "c"(0));
     #endif
-    
+
     /* OSXSAVE bit (27) must be set */
     if (!(ecx & (1 << 27))) {
         return 0;
     }
-    
+
     /* Check XCR0 register using XGETBV instruction */
     unsigned long long xcr0;
-    
+
     #if defined(__GNUC__) || defined(__clang__)
     /* GCC/Clang inline assembly for xgetbv */
-    __asm__ volatile ("xgetbv" : "=A" (xcr0) : "c" (0) : "%edx");
+    __asm__ volatile("xgetbv" : "=A"(xcr0) : "c"(0) : "%edx");
     #elif defined(_MSC_VER)
-    #include <intrin.h>
+        #include <intrin.h>
     xcr0 = _xgetbv(0);
     #else
     /* Unknown compiler, assume OS supports AVX (fallback) */
     return 1;
     #endif
-    
+
     /* AVX requires both SSE (bit 1) and AVX (bit 2) bits in XCR0 */
     /* Bits 1 and 2 must be set (0x6) */
     return (xcr0 & 0x6) == 0x6;
-    
-    #else
+
+#else
     /* Non-x86 platforms don't need this check */
     return 1;
-    #endif
+#endif
 }
 
 /**
@@ -101,23 +101,23 @@ static inline int _detect_os_avx_support(void) {
  * - GCC/clang: __cpuid_count() intrinsic
  * - MSVC: __cpuidex() intrinsic
  * - Generic: inline assembly fallback
- * 
+ *
  * @return 1 if AVX2 is supported, 0 otherwise
  */
 static inline int _detect_avx2_x86(void) {
-    #if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
 
     /* GCC/clang implementation using built-in CPUID functions */
     #if defined(__GNUC__) || defined(__clang__)
     unsigned int eax, ebx, ecx, edx;
-    
+
     if (__get_cpuid_max(0, NULL) < 7) {
-    return 0;  /* CPUID leaf 7 not supported */
+        return 0; /* CPUID leaf 7 not supported */
     }
 
     /* Query leaf 7, subleaf 0 for extended features */
     __cpuid_count(7, 0, eax, ebx, ecx, edx);
-    
+
     /* BIT_AVX2 (1 << 5) indicates AVX2 support in EBX */
     if (ebx & BIT_AVX2) {
         /* AVX2 is supported by CPU, now check OS support */
@@ -128,12 +128,12 @@ static inline int _detect_avx2_x86(void) {
     /* Microsoft Visual C++ implementation */
     #elif defined(_MSC_VER)
     int cpuInfo[4];
-    
+
     /* Check maximum CPUID level */
     __cpuid(cpuInfo, 0);
     if (cpuInfo[0] < 7)
         return 0;
-    
+
     /* Query leaf 7 using __cpuidex */
     __cpuidex(cpuInfo, 7, 0);
     if (cpuInfo[1] & BIT_AVX2) {
@@ -145,63 +145,59 @@ static inline int _detect_avx2_x86(void) {
     #else
     /* Generic inline assembly implementation for compilers without built-ins */
     uint32_t eax, ebx, ecx, edx;
-    
-    /* First, check if CPUID is supported by toggling ID bit in EFLAGS */
-    #if defined(__x86_64__)
+
+        /* First, check if CPUID is supported by toggling ID bit in EFLAGS */
+        #if defined(__x86_64__)
     /* 64-bit version */
-    __asm__ volatile (
-        "pushfq\n\t"                 /* Push RFLAGS onto stack */
-        "popq %%rax\n\t"             /* Pop RFLAGS into RAX */
-        "movq %%rax, %%rcx\n\t"      /* Save original flags in RCX */
-        "xorq $0x200000, %%rax\n\t"  /* Toggle ID bit (bit 21) */
-        "pushq %%rax\n\t"            /* Push modified flags */
-        "popfq\n\t"                  /* Pop into RFLAGS */
-        "pushfq\n\t"                 /* Push RFLAGS again */
-        "popq %%rax\n\t"             /* Pop into RAX */
-        "xorq %%rcx, %%rax"          /* XOR with original - if ID bit changed, CPUID supported */
+    __asm__ volatile(
+        "pushfq\n\t"                /* Push RFLAGS onto stack */
+        "popq %%rax\n\t"            /* Pop RFLAGS into RAX */
+        "movq %%rax, %%rcx\n\t"     /* Save original flags in RCX */
+        "xorq $0x200000, %%rax\n\t" /* Toggle ID bit (bit 21) */
+        "pushq %%rax\n\t"           /* Push modified flags */
+        "popfq\n\t"                 /* Pop into RFLAGS */
+        "pushfq\n\t"                /* Push RFLAGS again */
+        "popq %%rax\n\t"            /* Pop into RAX */
+        "xorq %%rcx, %%rax"         /* XOR with original - if ID bit changed, CPUID supported */
         : "=a"(eax)
         :
-        : "rcx"
-    );
-    #else
+        : "rcx");
+        #else
     /* 32-bit version */
-    __asm__ volatile (
-        "pushfl\n\t"                 /* Push EFLAGS onto stack */
-        "popl %%eax\n\t"             /* Pop EFLAGS into EAX */
-        "movl %%eax, %%ecx\n\t"      /* Save original flags in ECX */
-        "xorl $0x200000, %%eax\n\t"  /* Toggle ID bit (bit 21) */
-        "pushl %%eax\n\t"            /* Push modified flags */
-        "popfl\n\t"                  /* Pop into EFLAGS */
-        "pushfl\n\t"                 /* Push EFLAGS again */
-        "popl %%eax\n\t"             /* Pop into EAX */
-        "xorl %%ecx, %%eax"          /* XOR with original - if ID bit changed, CPUID supported */
+    __asm__ volatile(
+        "pushfl\n\t"                /* Push EFLAGS onto stack */
+        "popl %%eax\n\t"            /* Pop EFLAGS into EAX */
+        "movl %%eax, %%ecx\n\t"     /* Save original flags in ECX */
+        "xorl $0x200000, %%eax\n\t" /* Toggle ID bit (bit 21) */
+        "pushl %%eax\n\t"           /* Push modified flags */
+        "popfl\n\t"                 /* Pop into EFLAGS */
+        "pushfl\n\t"                /* Push EFLAGS again */
+        "popl %%eax\n\t"            /* Pop into EAX */
+        "xorl %%ecx, %%eax"         /* XOR with original - if ID bit changed, CPUID supported */
         : "=a"(eax)
         :
-        : "ecx"
-    );
-    #endif
+        : "ecx");
+        #endif
 
     /* If ID bit couldn't be toggled, CPUID not supported */
     if (!(eax & 0x200000))
         return 0;
 
     /* Get maximum CPUID level */
-    __asm__ volatile (
+    __asm__ volatile(
         "cpuid"
         : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(0), "c"(0)
-    );
+        : "a"(0), "c"(0));
 
     if (eax < 7)
-        return 0;  /* Leaf 7 not supported */
+        return 0; /* Leaf 7 not supported */
 
     /* Query leaf 7 for AVX2 support */
-    __asm__ volatile (
+    __asm__ volatile(
         "cpuid"
         : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(7), "c"(0)
-    );
-    
+        : "a"(7), "c"(0));
+
     /* Check AVX2 bit (bit 5 in EBX) */
     if (ebx & (1u << 5)) {
         /* AVX2 supported by CPU, check OS support */
@@ -210,10 +206,10 @@ static inline int _detect_avx2_x86(void) {
     return 0;
     #endif
 
-    #else
+#else
     /* Not x86/x64 platform - AVX2 not supported */
     return 0;
-    #endif
+#endif
 }
 
 /**
@@ -223,47 +219,47 @@ static inline int _detect_avx2_x86(void) {
  * - Apple (iOS/macOS): NEON always available on modern devices
  * - Windows: NEON always available on ARM targets
  * - Other: Assume NEON is available if ARM NEON macros are defined
- * 
+ *
  * @return 1 if NEON is supported, 0 otherwise
  */
 static inline int _detect_neon_arm(void) {
-    #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM) || defined(_M_ARM64)
-    
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM) || defined(_M_ARM64)
+
     /* Linux/Android detection via /proc/cpuinfo */
     #if defined(__linux__) || defined(ANDROID) || defined(__ANDROID__)
-    FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
+    FILE* cpuinfo = fopen("/proc/cpuinfo", "r");
     if (cpuinfo) {
         char buffer[1024];
         /* Scan cpuinfo line by line looking for NEON/asimd feature flags */
         while (fgets(buffer, sizeof(buffer), cpuinfo)) {
             if (strstr(buffer, "neon") || strstr(buffer, "asimd")) {
                 fclose(cpuinfo);
-                return 1;  /* NEON found */
+                return 1; /* NEON found */
             }
         }
         fclose(cpuinfo);
     }
-    return 0;  /* NEON not found in cpuinfo */
-    
+    return 0; /* NEON not found in cpuinfo */
+
     /* Apple platforms (iOS, macOS on Apple Silicon) */
     #elif defined(__APPLE__) && (defined(__arm__) || defined(__aarch64__))
     /* All Apple ARM devices have NEON support */
     return 1;
-    
+
     /* Windows on ARM */
     #elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
     /* Windows ARM targets always have NEON */
     return 1;
-    
+
     #else
     /* For other platforms, assume NEON is available if macros are defined */
     return 1;
     #endif
-    
-    #else
+
+#else
     /* ARM NEON macros not defined - NEON not supported */
     return 0;
-    #endif
+#endif
 }
 
 /* ==================== PUBLIC SIMD DETECTION API ==================== */
@@ -271,7 +267,7 @@ static inline int _detect_neon_arm(void) {
 /**
  * Public API to check if AVX2 is supported on current platform
  * First verifies we're on x86, then calls internal detection
- * 
+ *
  * @return 1 if AVX2 is available, 0 otherwise
  */
 static inline int xzalgochain_avx2_supported(void) {
@@ -283,7 +279,7 @@ static inline int xzalgochain_avx2_supported(void) {
 /**
  * Public API to check if NEON is supported on current platform
  * First verifies we're on ARM, then calls internal detection
- * 
+ *
  * @return 1 if NEON is available, 0 otherwise
  */
 static inline int xzalgochain_neon_supported(void) {
@@ -295,28 +291,28 @@ static inline int xzalgochain_neon_supported(void) {
 /**
  * Get the type of SIMD available on current platform
  * Checks for AVX2 first (x86), then NEON (ARM), falls back to SIMD_NONE
- * 
+ *
  * @return SIMD type constant: SIMD_AVX2, SIMD_NEON, or SIMD_NONE
  */
 static inline int xzalgochain_get_simd_type(void) {
     if (xzalgochain_is_x86() && _detect_avx2_x86())
         return SIMD_AVX2;
-    
+
     if (xzalgochain_is_arm() && _detect_neon_arm())
         return SIMD_NEON;
-    
+
     return SIMD_NONE;
 }
 
 /**
  * Get human-readable name of the available SIMD type
  * Useful for logging and version information
- * 
+ *
  * @return String constant: "AVX2", "NEON", or "None"
  */
 static inline const char* xzalgochain_get_simd_name(void) {
     int simd_type = xzalgochain_get_simd_type();
-    
+
     switch (simd_type) {
         case SIMD_AVX2:
             return "AVX2";
@@ -330,17 +326,17 @@ static inline const char* xzalgochain_get_simd_name(void) {
 /**
  * Legacy/deprecated function for SIMD detection
  * Returns SIMD type as uint8_t for backward compatibility
- * 
+ *
  * @return SIMD type as uint8_t (cast from xzalgochain_get_simd_type())
  */
 static inline uint8_t detect_simd(void) {
-    return (uint8_t)xzalgochain_get_simd_type();
+    return (uint8_t) xzalgochain_get_simd_type();
 }
 
 /**
  * Legacy/deprecated function for SIMD type
  * Maintains API compatibility with older versions
- * 
+ *
  * @return SIMD type (same as xzalgochain_get_simd_type())
  */
 static inline int xzalgochain_simd_type(void) {
