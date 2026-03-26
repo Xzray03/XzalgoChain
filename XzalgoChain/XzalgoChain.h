@@ -293,6 +293,9 @@ static inline void xzalgochain_init(XzalgoChain_CTX *ctx) {
     /* Detect SIMD type unless scalar mode is forced */
     if (!xzalgochain_is_forced_scalar()) {
         ctx->simd_type = xzalgochain_get_simd_type();
+        if (((uintptr_t)ctx->buffer % 32) != 0) {
+            ctx->simd_type = SIMD_NONE;
+        }
     } else {
         ctx->simd_type = SIMD_NONE;
     }
