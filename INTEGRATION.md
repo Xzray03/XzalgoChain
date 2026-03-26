@@ -1180,7 +1180,7 @@ includedir=${prefix}/include
 
 Name: XzalgoChain
 Description: 320-bit Cryptographic Hash Function
-Version: 0.0.1.2
+Version: {version now}  # update this!
 Libs: -L${libdir} -lXzalgoChain
 Cflags: -I${includedir}
 ```
