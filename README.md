@@ -126,6 +126,7 @@ XzalgoChain
 ├── Makefile.win                        # Main build system for windows
 ├── wasm-build.sh                       # WASM build system
 ├── NOTICE                              # Legal notices and attributions
+├── Version                             # File version
 ├── README.md                           # Main project documentation (This file)
 ├── TEST.md                             # Test results and documentation
 │
