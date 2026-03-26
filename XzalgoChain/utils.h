@@ -82,6 +82,7 @@
  * @param n Number of bits to rotate left (0-63, automatically masked)
  * @return Rotated value: (x << n) | (x >> (64-n))
  */
+static inline uint64_t rotl64(uint64_t x, uint64_t n) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t rotl64(uint64_t x, uint64_t n) {
     /* Mask n to ensure it's within 0-63 range
      * This handles cases where n >= 64 by taking only lower 6 bits
@@ -112,6 +113,7 @@ static inline uint64_t rotl64(uint64_t x, uint64_t n) {
  * @param n Number of bits to rotate right (0-63, automatically masked)
  * @return Rotated value: (x >> n) | (x << (64-n))
  */
+static inline uint64_t rotr64(uint64_t x, uint64_t n) XZALGOCHAIN_ATTR_CONST;
 static inline uint64_t rotr64(uint64_t x, uint64_t n) {
     /* Mask n to 0-63 range */
     n &= 63u;
@@ -140,6 +142,7 @@ static inline uint64_t rotr64(uint64_t x, uint64_t n) {
  * @param b Pointer to 8-byte array
  * @return 64-bit integer value read from bytes
  */
+static inline uint64_t bytes_to_u64(const uint8_t *b) XZALGOCHAIN_ATTR_PURE;
 static inline uint64_t bytes_to_u64(const uint8_t *b) {
     uint64_t v;
     
@@ -215,6 +218,7 @@ static inline void xzalgochain_copy(uint8_t *dst, const uint8_t *src) {
  * @return      1 if hashes are equal and both pointers are non-NULL,
  *              0 otherwise (including if either pointer is NULL)
  */
+static inline int xzalgochain_equals(const uint8_t* h1, const uint8_t* h2) XZALGOCHAIN_ATTR_PURE;
 static inline int xzalgochain_equals(const uint8_t* h1, const uint8_t* h2)
 {
     if (!h1 || !h2)
