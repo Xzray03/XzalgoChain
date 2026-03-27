@@ -239,6 +239,7 @@ set(XZALGOCHAIN_HEADERS
     ${XZALGOCHAIN_INCLUDE_DIR}/algorithm.h
     ${XZALGOCHAIN_INCLUDE_DIR}/algorithm_scalar.h
     ${XZALGOCHAIN_INCLUDE_DIR}/algorithm_simd.h
+    ${XZALGOCHAIN_INCLUDE_DIR}/xz_csprng.h
 )
 
 # ==================== INTERFACE LIBRARY ====================
