@@ -167,7 +167,6 @@ static FILE* fmemopen_win(void* buf, size_t size, const char* mode) {
  */
 #define XZALGOCHAIN_IMPLEMENTATION
 #include "XzalgoChain/XzalgoChain.h"
-#include "XzalgoChain/xz_csprng.h"
 
 /* Buffer size for reading files/streams - 16KB for efficient I/O */
 #define BUFFER_SIZE 16384
@@ -404,7 +403,13 @@ static int hash_stream(FILE* fp, const char* desc, uint8_t* hash, XzalgoChain_CT
 
         if (use_salt) {
             uint8_t salt[XZALGOCHAIN_SALT_SIZE];
-            xz_csp_rng(salt, XZALGOCHAIN_SALT_SIZE);
+            if (xz_generate_salt(salt, 0) != 0) {
+                if (!quiet_mode) {
+                    fprintf(stderr, "Failed to generate salt\n");
+                }
+                xzalgochain_ctx_wipe(ctx);
+                return -1;
+            }
             xzalgochain_update(ctx, salt, XZALGOCHAIN_SALT_SIZE);
             if (!quiet_mode) {
                 printf("Salt: ");
