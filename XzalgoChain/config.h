@@ -62,6 +62,13 @@
  */
 #define ROUND_CONSTANTS_SIZE 128 /* Constants */
 
+/**
+ * XZALGOCHAIN_SALT_SIZE: Size of the salt output in bytes (if used
+ * 256 bits = 32 bytes (256 / 8 = 32)
+ * This constant defines the output length of the salt
+ */
+#define XZALGOCHAIN_SALT_SIZE 32 /* 256 bits = 32 bytes */
+
 /* ==================== SIMD TYPE CONSTANTS ==================== */
 
 /**
