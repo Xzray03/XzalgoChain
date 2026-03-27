@@ -106,6 +106,11 @@ int xzalgochain_is_forced_scalar_lib(void) {
     return xzalgochain_is_forced_scalar();
 }
 
+/* ==================== CSPRNG FUNCTIONS ==================== */
+int xz_generate_salt_lib(void* buf, unsigned int bits) {
+    return xz_generate_salt(buf, bits);
+}
+
 #ifdef __cplusplus
 }
 #endif
