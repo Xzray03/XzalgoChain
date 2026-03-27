@@ -103,6 +103,29 @@ Computes hash of a complete message in one call. Convenience function for simple
 
 ---
 
+### CSPRNG Functions
+
+```c
+int xz_generate_salt(void* buf, unsigned int bits);
+```
+Generates cryptographically secure random salt bytes using system CSPRNG.
+
+**Parameters:**
+- `buf` - Pointer to buffer to fill with random salt bytes (must not be NULL)
+- `bits` - Desired salt size in bits. If `0` or `< 128`, falls back to `XZALGOCHAIN_SALT_SIZE` (256 bits / 32 bytes)
+
+**Returns:**
+- `0` on success
+- `-1` on error (buffer zeroed on failure)
+
+**Security Considerations:**
+- Uses system CSPRNG (`/dev/urandom` on Linux, `BCryptGenRandom` on Windows, `SecRandomCopyBytes` on macOS)
+- Thread-safe on all supported platforms
+- Prevents excessively large allocations (max 1 MB)
+- Zeroes buffer on failure to prevent information leakage
+
+---
+
 ### Utility Functions
 
 ```c
