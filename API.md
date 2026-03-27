@@ -266,6 +266,13 @@ int xzalgochain_is_forced_scalar_lib(void);
 
 ---
 
+### CSPRNG Functions (Library Version)
+```c
+int xz_generate_salt_lib(void* buf, unsigned int bits);
+```
+
+---
+
 ## WASM API (xzalgochain_wasm.c)
 
 All WASM functions are prefixed with `_wasm` suffix and are designed for WebAssembly module exports.
