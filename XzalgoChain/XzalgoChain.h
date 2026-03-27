@@ -28,6 +28,7 @@
 #include "algorithm.h"
 #include "algorithm_scalar.h"
 #include "algorithm_simd.h"
+#include "xz_csprng.h"
 #include <stdalign.h>
 #include <stdatomic.h>
 
@@ -620,6 +621,46 @@ static inline int xzalgochain_is_forced_scalar(void) {
     return atomic_load(&_xz_force_scalar);
 }
 #endif
+
+/* ==================== CSPRNG Function ==================== */
+
+/**
+ * Generate cryptographically secure random salt
+ * 
+ * @param buf  Pointer to buffer to fill with random salt bytes
+ * @param bits Desired salt size in bits (if 0, uses XZALGOCHAIN_SALT_SIZE)
+ * @return 0 on success, -1 on error
+ * 
+ * Example:
+ *   // Use default salt size (256-bit)
+ *   uint8_t salt1[XZALGOCHAIN_SALT_SIZE];
+ *   xz_generate_salt(salt1, 0);
+ *   
+ *   // Use custom 128-bit salt
+ *   uint8_t salt2[16];
+ *   xz_generate_salt(salt2, 128);
+ */
+static inline int xz_generate_salt(void* buf, unsigned int bits) {
+    size_t bytes;
+    
+    if (!buf) {
+        return -1;
+    }
+    
+    /* Determine salt size: use default if bits is 0 or below minimum (128 bits) */
+    if (bits == 0 || bits < 128) {
+        bytes = XZALGOCHAIN_SALT_SIZE;
+    } else {
+        bytes = (bits + 7) / 8; /* Round up to nearest byte */
+    }
+    
+    /* Validate size (prevent DoS) */
+    if (bytes > XZ_CSPRNG_MAX_REQUEST) {
+        return -1;
+    }
+    
+    return xz_csp_rng(buf, bytes);
+}
 
 #ifdef __cplusplus
 }
