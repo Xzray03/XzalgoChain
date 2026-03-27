@@ -160,6 +160,7 @@ XzalgoChain
     ├── platform_detect.h               # Platform/architecture detection
     ├── simd_detect.h                   # Runtime SIMD capability detection
     ├── utils.h                         # Utility functions (endian, rotate, etc)
+    ├── xz_csprng.h                     # Helper header for generate salt
     └── XzalgoChain.h                   # Main public header (includes all)
 ```
 
