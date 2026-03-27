@@ -167,13 +167,15 @@ static FILE* fmemopen_win(void* buf, size_t size, const char* mode) {
  */
 #define XZALGOCHAIN_IMPLEMENTATION
 #include "XzalgoChain/XzalgoChain.h"
+#include "XzalgoChain/xz_csprng.h"
 
 /* Buffer size for reading files/streams - 16KB for efficient I/O */
 #define BUFFER_SIZE 16384
 
-/* Global verbosity and quiet mode flags */
+/* Global verbosity, quiet, and salt mode flags */
 static int verbose_mode = 0; /* Enable detailed output */
 static int quiet_mode = 0;   /* Suppress normal output */
+static int use_salt = 0;     /* Generate HASH with SALT */
 
 /**
  * Get human-readable platform name based on detected macros
@@ -288,13 +290,15 @@ static void print_help(const char* prog) {
 
     /* Command-line options */
     printf("Options:\n");
-    printf("  -i STRING   Hash string\n");
-    printf("  -c HASH     Check mode\n");
-    printf("  -f          Force scalar mode (disable SIMD)\n");
-    printf("  -q          Quiet\n");
-    printf("  -v          Version\n");
-    printf("  -V          Verbose\n");
-    printf("  -h          Help\n");
+    printf("  -i STRING         Hash string\n");
+    printf("  -c HASH           Check mode\n");
+    printf("  -c HASH -s SALT   Check with salt mode\n");
+    printf("  -f                Force scalar mode (disable SIMD)\n");
+    printf("  -u                Use salt (yes/no, default: no)\n");
+    printf("  -q                Quiet\n");
+    printf("  -v                Version\n");
+    printf("  -V                Verbose\n");
+    printf("  -h                Help\n");
 }
 
 /**
@@ -356,56 +360,114 @@ static void verbose(const char* fmt, ...) {
 }
 
 /**
+ * Parse hexadecimal hash string to byte array
+ * @param s Input hex string
+ * @param hash Output byte array (must be XZALGOCHAIN_HASH_SIZE bytes)
+ * @return 0 on success, -1 on invalid format
+ */
+static int parse_hash(const char* s, uint8_t* hash) {
+    size_t len = strlen(s);
+
+    /* Handle possible trailing newline */
+    if (len == XZALGOCHAIN_HASH_SIZE * 2 + 1 && (s[len - 1] == '\n' || s[len - 1] == '\r'))
+        len--;
+
+    /* Validate length (should be exactly twice the hash size) */
+    if (len != XZALGOCHAIN_HASH_SIZE * 2)
+        return -1;
+
+    /* Parse each pair of hex digits */
+    for (size_t i = 0; i < XZALGOCHAIN_HASH_SIZE; ++i) {
+        unsigned int b;
+        if (sscanf(s + (i * 2), "%02x", &b) != 1)
+            return -1;
+        hash[i] = (uint8_t) b;
+    }
+
+    return 0;
+}
+
+/**
  * Read from a stream and compute its hash
  * @param fp FILE pointer to read from
  * @param desc Description of input source (for verbose output)
  * @param hash Output buffer for computed hash (must be XZALGOCHAIN_HASH_SIZE bytes)
  * @return 0 on success, -1 on error
  */
-static int hash_stream(FILE* fp, const char* desc, uint8_t* hash) {
-    XzalgoChain_CTX ctx;         /* Hash context */
-    uint8_t buffer[BUFFER_SIZE]; /* Read buffer */
-    size_t total = 0;            /* Total bytes read (for verbose output) */
+static int hash_stream(FILE* fp, const char* desc, uint8_t* hash, XzalgoChain_CTX* ctx, int init_ctx) {
+    uint8_t buffer[BUFFER_SIZE];
+    size_t total = 0;
 
-    /* Initialize the hash context */
-    xzalgochain_init(&ctx);
+    // Initialize the hash context only if requested
+    if (init_ctx) {
+        xzalgochain_init(ctx);
 
-    /* Read and process data in chunks */
-    while (1) {
-        size_t r = fread(buffer, 1, BUFFER_SIZE, fp);
-
-        if (r > 0) {
-            xzalgochain_update(&ctx, buffer, r);
-            total += r;
-            verbose("Read %zu bytes from %s\r",
-                    total, desc ? desc : "stdin");
-        }
-
-        /* Check for read errors or EOF */
-        if (r < BUFFER_SIZE) {
-            if (ferror(fp)) {
-                if (!quiet_mode) {
-                    fprintf(stderr,
-                            "Error reading %s: %s\n",
-                            desc ? desc : "stdin",
-                            strerror(errno));
+        if (use_salt) {
+            uint8_t salt[XZALGOCHAIN_SALT_SIZE];
+            xz_csp_rng(salt, XZALGOCHAIN_SALT_SIZE);
+            xzalgochain_update(ctx, salt, XZALGOCHAIN_SALT_SIZE);
+            if (!quiet_mode) {
+                printf("Salt: ");
+                for (int i = 0; i < XZALGOCHAIN_SALT_SIZE; ++i) {
+                    printf("%02x", salt[i]);
                 }
-
-                /* Clear sensitive data from context on error */
-                xzalgochain_ctx_wipe(&ctx);
-                return -1;
+                printf("\n");
             }
-            break; /* EOF reached */
         }
     }
 
-    /* Finalize hash computation */
-    xzalgochain_final(&ctx, hash);
-    /* Wipe context to clear sensitive data */
-    xzalgochain_ctx_wipe(&ctx);
+    // Read and process data in chunks
+    while (1) {
+        size_t r = fread(buffer, 1, BUFFER_SIZE, fp);
+        if (r > 0) {
+            xzalgochain_update(ctx, buffer, r);
+            total += r;
+            verbose("Read %zu bytes from %s\r", total, desc ? desc : "stdin");
+        }
 
-    if (verbose_mode && !quiet_mode)
-        fprintf(stderr, "\n");
+        if (r < BUFFER_SIZE) {
+            if (ferror(fp)) {
+                if (!quiet_mode) {
+                    fprintf(stderr, "Error reading %s: %s\n", desc ? desc : "stdin", strerror(errno));
+                }
+                xzalgochain_ctx_wipe(ctx);
+                return -1;
+            }
+            break;
+        }
+    }
+
+    xzalgochain_final(ctx, hash);
+    xzalgochain_ctx_wipe(ctx);
+
+    if (verbose_mode && !quiet_mode) fprintf(stderr, "\n");
+    return 0;
+}
+
+/**
+ * Parse hexadecimal salt string to byte array
+ * @param s Input hex string
+ * @param salt Output byte array (must be XZALGOCHAIN_SALT_SIZE bytes)
+ * @return 0 on success, -1 on invalid format
+ */
+static int parse_salt(const char* s, uint8_t* salt) {
+    size_t len = strlen(s);
+
+    /* Handle possible trailing newline */
+    if (len == XZALGOCHAIN_SALT_SIZE * 2 + 1 && (s[len - 1] == '\n' || s[len - 1] == '\r'))
+        len--;
+
+    /* Validate length (should be exactly twice the salt size) */
+    if (len != XZALGOCHAIN_SALT_SIZE * 2)
+        return -1;
+
+    /* Parse each pair of hex digits */
+    for (size_t i = 0; i < XZALGOCHAIN_SALT_SIZE; ++i) {
+        unsigned int b;
+        if (sscanf(s + (i * 2), "%02x", &b) != 1)
+            return -1;
+        salt[i] = (uint8_t) b;
+    }
 
     return 0;
 }
@@ -494,34 +556,6 @@ static void print_hash(const uint8_t* hash, const char* label) {
     }
 }
 
-/**
- * Parse hexadecimal hash string to byte array
- * @param s Input hex string
- * @param hash Output byte array (must be XZALGOCHAIN_HASH_SIZE bytes)
- * @return 0 on success, -1 on invalid format
- */
-static int parse_hash(const char* s, uint8_t* hash) {
-    size_t len = strlen(s);
-
-    /* Handle possible trailing newline */
-    if (len == XZALGOCHAIN_HASH_SIZE * 2 + 1 && (s[len - 1] == '\n' || s[len - 1] == '\r'))
-        len--;
-
-    /* Validate length (should be exactly twice the hash size) */
-    if (len != XZALGOCHAIN_HASH_SIZE * 2)
-        return -1;
-
-    /* Parse each pair of hex digits */
-    for (size_t i = 0; i < XZALGOCHAIN_HASH_SIZE; ++i) {
-        unsigned int b;
-        if (sscanf(s + (i * 2), "%02x", &b) != 1)
-            return -1;
-        hash[i] = (uint8_t) b;
-    }
-
-    return 0;
-}
-
 /* Windows getopt implementation (if not provided by compiler) */
 #ifdef PLATFORM_WINDOWS
     #ifndef HAVE_GETOPT
@@ -587,8 +621,13 @@ static int getopt_win(int argc, char* const argv[], const char* optstring) {
 int main(int argc, char** argv) {
     int opt;
     const char* check_str = NULL;    /* Hash to check against */
+    const char* check_salt = NULL;   /* Salt for hash check */
     const char* string_input = NULL; /* String input mode */
     const char* filename = NULL;     /* File input mode */
+    XzalgoChain_CTX ctx;
+    uint8_t hash[XZALGOCHAIN_HASH_SIZE];
+    uint8_t expected[XZALGOCHAIN_HASH_SIZE];
+    int has_expected = 0;
 
 #ifdef PLATFORM_WINDOWS
     /* Set stdout to binary mode on Windows to avoid output corruption */
@@ -596,27 +635,40 @@ int main(int argc, char** argv) {
 #endif
 
     /* Parse command-line options */
-    while ((opt = getopt(argc, argv, "i:c:qvVhf")) != -1) {
+    while ((opt = getopt(argc, argv, "i:c:s:qvVhfu:")) != -1) {
         switch (opt) {
             case 'i':
                 string_input = optarg;
-                break; /* String input */
+                break;
             case 'c':
                 check_str = optarg;
-                break; /* Check mode */
+                break;
+            case 's':
+                check_salt = optarg;
+                break;
+            case 'u':
+                if (strcmp(optarg, "yes") == 0) {
+                    use_salt = 1;
+                } else if (strcmp(optarg, "no") == 0) {
+                    use_salt = 0;
+                } else {
+                    fprintf(stderr, "Invalid value for -u: %s\n", optarg);
+                    return 1;
+                }
+                break;
             case 'q':
                 quiet_mode = 1;
-                break; /* Quiet mode */
+                break;
             case 'v':
                 print_version();
-                return 0; /* Version info */
+                return 0;
             case 'V':
                 verbose_mode = 1;
-                break; /* Verbose mode */
+                break;
             case 'h':
                 print_help(argv[0]);
-                return 0; /* Help */
-            case 'f':     /* Force scalar mode */
+                return 0;
+            case 'f':
                 xzalgochain_force_scalar(1);
                 if (verbose_mode) fprintf(stderr, "Force scalar mode enabled\n");
                 break;
@@ -637,6 +689,15 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    /* Parse expected hash if in check mode */
+    if (check_str) {
+        if (parse_hash(check_str, expected) != 0) {
+            if (!quiet_mode) fprintf(stderr, "Invalid hash format\n");
+            return 1;
+        }
+        has_expected = 1;
+    }
+
     /* Open input stream based on arguments */
     const char* label = NULL;
     FILE* input = open_input_stream(filename, string_input, &label);
@@ -647,46 +708,72 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /* Buffer for computed hash */
-    uint8_t hash[XZALGOCHAIN_HASH_SIZE];
+    /* Handle check mode with salt */
+    if (check_salt) {
+        if (!check_str) {
+            fprintf(stderr, "Error: -s requires -c\n");
+            if (input != stdin) fclose(input);
+            return 1;
+        }
 
-    /* Compute hash from input stream */
-    if (hash_stream(input, label, hash) != 0) {
+        uint8_t salt[XZALGOCHAIN_SALT_SIZE];
+        if (parse_salt(check_salt, salt) != 0) {
+            if (!quiet_mode) fprintf(stderr, "Invalid salt format\n");
+            if (input != stdin) fclose(input);
+            return 1;
+        }
+
+        /* Initialize context with salt */
+        xzalgochain_init(&ctx);
+        xzalgochain_update(&ctx, salt, XZALGOCHAIN_SALT_SIZE);
+
+        /* Compute hash with existing context (don't reinitialize) */
+        if (hash_stream(input, label, hash, &ctx, 0) != 0) {
+            if (input != stdin) fclose(input);
+            return 1;
+        }
+    }
+    /* Handle check mode without salt */
+    else if (check_str) {
+        /* Compute hash (will initialize context internally) */
+        if (hash_stream(input, label, hash, &ctx, 1) != 0) {
+            if (input != stdin) fclose(input);
+            return 1;
+        }
+    }
+    /* Normal mode (just compute and print hash) */
+    else {
+        /* Compute hash (will initialize context internally) */
+        if (hash_stream(input, label, hash, &ctx, 1) != 0) {
+            if (input != stdin) fclose(input);
+            return 1;
+        }
+
+        /* Close input if it's not stdin */
         if (input != stdin)
             fclose(input);
-        return 1;
+
+        /* Output computed hash */
+        if (!quiet_mode)
+            print_hash(hash, label);
+
+        return 0;
     }
 
     /* Close input if it's not stdin */
     if (input != stdin)
         fclose(input);
 
-    /* Check mode: verify hash against expected value */
-    if (check_str) {
-        uint8_t expected[XZALGOCHAIN_HASH_SIZE];
-
-        /* Parse expected hash from string */
-        if (parse_hash(check_str, expected) != 0) {
-            if (!quiet_mode)
-                fprintf(stderr, "Invalid hash format\n");
-            return 1;
-        }
-
-        /* Compare computed hash with expected */
+    /* Verify hash if in check mode */
+    if (has_expected) {
         if (xzalgochain_equals(expected, hash)) {
-            if (!quiet_mode)
-                printf("%s: OK\n", label);
+            if (!quiet_mode) printf("%s: OK\n", label);
             return 0;
         } else {
-            if (!quiet_mode)
-                printf("%s: FAILED\n", label);
+            if (!quiet_mode) printf("%s: FAILED\n", label);
             return 1;
         }
     }
-
-    /* Normal mode: output computed hash */
-    if (!quiet_mode)
-        print_hash(hash, label);
 
     return 0;
 }
