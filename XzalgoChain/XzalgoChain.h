@@ -521,34 +521,7 @@ static inline void xzalgochain(const uint8_t* data, size_t len, uint8_t output[X
     xzalgochain_update(&ctx, data, len);
     xzalgochain_final(&ctx, output);
 
-    /* Additional mixing on the output for dependency elimination */
-    uint64_t out[5];
-    memcpy(out, output, sizeof(out));
-    for (int mix = 0; mix < 3; mix++) {
-        uint64_t acc = 0;
-        for (int i = 0; i < 5; i++) {
-            acc ^= out[i];
-            out[i] = rotr64(out[i], 19) ^ rotl64(acc, 37);
-            out[i] *= 0xBF58476D1CE4E5B9ULL;
-            out[i] ^= out[(i + 2) % 5] >> 27;
-        }
-    }
-    /* Convert back to bytes */
-    for (int i = 0; i < 5; i++)
-        u64_to_bytes(out[i], output + i * 8);
-
-    /* One more mixing pass on output */
-    uint64_t out64[5];
-    memcpy(out64, output, sizeof(out64));
-    for (int i = 0; i < 5; i++) {
-        out64[i] = extra_mix(out64[i]);
-        out64[i] ^= out64[(i + 2) % 5];
-    }
-    /* Convert back to bytes */
-    for (int i = 0; i < 5; i++)
-        u64_to_bytes(out64[i], output + i * 8);
-
-    atomic_thread_fence(memory_order_seq_cst); // full barrier
+    atomic_thread_fence(memory_order_seq_cst); // Full barrier
     secure_wipe(&ctx, sizeof(ctx));            /* Wipe context for security */
 }
 
