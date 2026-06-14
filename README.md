@@ -155,7 +155,9 @@ XzalgoChain
 └── XzalgoChain/                        # Core header-only library
     ├── algorithm.h                     # Core cryptographic primitives
     ├── algorithm_scalar.h              # Scalar (non-vectorized) implementation
-    ├── algorithm_simd.h                # SIMD implementations (AVX2/NEON)
+    ├── algorithm_simd.h                # SIMD implementations (driver)
+    ├── algorithm_simd-avx2.h           # SIMD implementations (AVX2)
+    ├── algorithm_simd-neon.h           # SIMD implementations (NEON)
     ├── config.h                        # Configuration constants and macros
     ├── platform_detect.h               # Platform/architecture detection
     ├── simd_detect.h                   # Runtime SIMD capability detection
