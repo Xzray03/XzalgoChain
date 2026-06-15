@@ -391,33 +391,48 @@ static int parse_hash(const char* s, uint8_t* hash) {
  * @param fp FILE pointer to read from
  * @param desc Description of input source (for verbose output)
  * @param hash Output buffer for computed hash (must be XZALGOCHAIN_HASH_SIZE bytes)
+ * @param ctx Pointer to hash context (will be initialized and wiped)
+ * @param external_salt Pointer to 32-byte salt if provided externally (for check mode), NULL otherwise
  * @return 0 on success, -1 on error
  */
-static int hash_stream(FILE* fp, const char* desc, uint8_t* hash, XzalgoChain_CTX* ctx, int init_ctx) {
+static int hash_stream(FILE* fp, const char* desc, uint8_t* hash, XzalgoChain_CTX* ctx, const uint8_t* external_salt) {
     uint8_t buffer[BUFFER_SIZE];
     size_t total = 0;
+    uint8_t salt[XZALGOCHAIN_SALT_SIZE];
+    const uint8_t* current_salt = NULL;
 
-    // Initialize the hash context only if requested
-    if (init_ctx) {
-        xzalgochain_init(ctx);
+    // Initialize the hash context
+    xzalgochain_init(ctx);
 
-        if (use_salt) {
-            uint8_t salt[XZALGOCHAIN_SALT_SIZE];
-            if (xz_generate_salt(salt, 0) != 0) {
-                if (!quiet_mode) {
-                    fprintf(stderr, "Failed to generate salt\n");
-                }
-                xzalgochain_ctx_wipe(ctx);
-                return -1;
+    // Handle salt based on mode
+    if (external_salt != NULL) {
+        // External salt provided (check mode with -s)
+        current_salt = external_salt;
+        xzalgochain_update(ctx, current_salt, XZALGOCHAIN_SALT_SIZE);
+        if (!quiet_mode) {
+            printf("Using external salt: ");
+            for (int i = 0; i < XZALGOCHAIN_SALT_SIZE; ++i) {
+                printf("%02x", current_salt[i]);
             }
-            xzalgochain_update(ctx, salt, XZALGOCHAIN_SALT_SIZE);
+            printf("\n");
+        }
+    } else if (use_salt) {
+        // Generate new salt (normal mode with -u yes)
+        if (xz_generate_salt(salt, 0) != 0) {
             if (!quiet_mode) {
-                printf("Salt: ");
-                for (int i = 0; i < XZALGOCHAIN_SALT_SIZE; ++i) {
-                    printf("%02x", salt[i]);
-                }
-                printf("\n");
+                fprintf(stderr, "Failed to generate salt\n");
             }
+            xzalgochain_ctx_wipe(ctx);
+            return -1;
+        }
+        current_salt = salt;
+        xzalgochain_update(ctx, current_salt, XZALGOCHAIN_SALT_SIZE);
+        if (!quiet_mode) {
+            printf("Salt: ");
+            for (int i = 0; i < XZALGOCHAIN_SALT_SIZE; ++i) {
+                printf("%02x", current_salt[i]);
+            }
+            printf("\n");
         }
     }
 
@@ -440,6 +455,15 @@ static int hash_stream(FILE* fp, const char* desc, uint8_t* hash, XzalgoChain_CT
             }
             break;
         }
+    }
+
+    // Append total data length in bits (64-bit little-endian) and salt again if salt is active
+    if (current_salt != NULL) {
+        uint64_t total_bits = total * 8;
+        uint8_t bits_le[8];
+        u64_to_bytes(total_bits, bits_le); // Convert to little-endian bytes
+        xzalgochain_update(ctx, bits_le, 8);
+        xzalgochain_update(ctx, current_salt, XZALGOCHAIN_SALT_SIZE);
     }
 
     xzalgochain_final(ctx, hash);
@@ -728,28 +752,24 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        /* Initialize context with salt */
-        xzalgochain_init(&ctx);
-        xzalgochain_update(&ctx, salt, XZALGOCHAIN_SALT_SIZE);
-
-        /* Compute hash with existing context (don't reinitialize) */
-        if (hash_stream(input, label, hash, &ctx, 0) != 0) {
+        /* Compute hash using the external salt (salt || data || length || salt) */
+        if (hash_stream(input, label, hash, &ctx, salt) != 0) {
             if (input != stdin) fclose(input);
             return 1;
         }
     }
     /* Handle check mode without salt */
     else if (check_str) {
-        /* Compute hash (will initialize context internally) */
-        if (hash_stream(input, label, hash, &ctx, 1) != 0) {
+        /* Compute hash without salt */
+        if (hash_stream(input, label, hash, &ctx, NULL) != 0) {
             if (input != stdin) fclose(input);
             return 1;
         }
     }
     /* Normal mode (just compute and print hash) */
     else {
-        /* Compute hash (will initialize context internally) */
-        if (hash_stream(input, label, hash, &ctx, 1) != 0) {
+        /* Compute hash with or without salt based on use_salt flag */
+        if (hash_stream(input, label, hash, &ctx, NULL) != 0) {
             if (input != stdin) fclose(input);
             return 1;
         }
