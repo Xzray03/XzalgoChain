@@ -62,11 +62,10 @@ static inline uint64_t gamma_mix(uint64_t x, uint64_t y, uint64_t z, uint64_t ro
     /* Self-mixing: XOR with shifted version of itself */
     r ^= (r << 19) | (r >> 45);
 
-    /* Add multiplication by carefully chosen constants
-     * 0x8000000080008009ULL and 0x8000000000008081ULL are
-     * selected for their cryptographic properties
-     */
-    r += (x * 0x8000000080008009ULL) ^ (y * 0x8000000000008081ULL);
+    /* Constant-time diffusion mixing using ARX instead of hardware multiplication */
+    uint64_t mx = x ^ rotl64(x, 21) ^ rotr64(x, 37);
+    uint64_t my = y ^ rotl64(y, 29) ^ rotr64(y, 13);
+    r += (mx + 0x8000000080008009ULL) ^ (my + 0x8000000000008081ULL);
 
     return r;
 }
