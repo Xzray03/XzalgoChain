@@ -229,4 +229,60 @@ static inline int xzalgochain_equals(const uint8_t* h1, const uint8_t* h2) {
     return diff == 0;
 }
 
+/* ==================== PORTABLE SECURITY UTILITIES ==================== */
+
+#include <stdatomic.h>
+
+#if defined(_WIN32)
+    #include <windows.h>
+#elif defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__) || defined(__linux__)
+    #include <sys/mman.h>
+    #if defined(_POSIX_MEMLOCK) && (_POSIX_MEMLOCK >= 0)
+        #define XZ_HAS_MLOCK 1
+    #endif
+#endif
+
+static inline void xz_secure_lock_mem(void* ptr, size_t size) {
+    if (!ptr || size == 0) return;
+#if defined(_WIN32)
+    VirtualLock(ptr, size);
+#elif defined(XZ_HAS_MLOCK)
+    mlock(ptr, size);
+#else
+    (void)ptr;
+    (void)size;
+#endif
+}
+
+static inline void xz_secure_unlock_mem(void* ptr, size_t size) {
+    if (!ptr || size == 0) return;
+#if defined(_WIN32)
+    VirtualUnlock(ptr, size);
+#elif defined(XZ_HAS_MLOCK)
+    munlock(ptr, size);
+#else
+    (void)ptr;
+    (void)size;
+#endif
+}
+
+static inline void xz_enhanced_secure_wipe(void* v, size_t n) {
+    if (!v || n == 0) return;
+    volatile unsigned char* p = (volatile unsigned char*) v;
+    while (n--) {
+        *p++ = 0;
+    }
+    atomic_signal_fence(memory_order_seq_cst);
+}
+
+static inline void xz_state_blinding(uint64_t h[5], uint64_t salt) {
+    if (!h) return;
+    atomic_signal_fence(memory_order_seq_cst);
+    for (int i = 0; i < 5; i++) {
+        h[i] ^= rotl64(salt, i * 7 + 3);
+        h[i] += rotr64(salt, i * 11 + 5);
+    }
+    atomic_signal_fence(memory_order_seq_cst);
+}
+
 #endif /* XZALGOCHAIN_UTILS_H */
