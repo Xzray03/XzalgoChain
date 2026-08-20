@@ -441,19 +441,19 @@ Input Block → Process Block → Update State → Generate Salt
 ### Empty String
 ```
 Input:  (empty)
-Output: 6b6ef71c2d5a4bd8527a596124a39b251900a95cdbaa5ca419ce172343820dd6c15bdd3cc5b023b8
+Output: 7f5a6973cebea243b70357c3684c3d6bc8030795270d3d11820b0dfe5cd35d947c93e48020a98dc4
 ```
 
 ### "Hello, World"
 ```
 Input:  "Hello, World"
-Output: e8154c62a6afde90685824f16e5e537358e9b53fda49260f5139c699e78534988ee922d11d38c35f
+Output: 5830fa43ba63f97fb302cd66c31a5c9115a2449a35faadba4340fc70419e36691ecea237cf6a87d4
 ```
 
 ### 1024-bit Block
 ```
 Input:  python -c "import sys; sys.stdout.buffer.write(b'\x00'*128)" | ./xzalgo320sum (1024 bits of 0x00)
-Output: 456466f0dfcc7441605ebccfdf9e19f48c4e39e9cc3776362ec771b02b46540af658c63fe8c37775
+Output: e6c0fcc645b0e9d33438f820349b9a766c7e482551c21f4726c32c04638c2ed3432616eb1487c08f
 ```
 
 ## Implementation Notes
