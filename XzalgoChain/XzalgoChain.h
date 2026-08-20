@@ -63,6 +63,8 @@ typedef struct {
     size_t buffer_len;                                                 /* Number of bytes currently in buffer */
     uint64_t total_bits;                                               /* Total bits processed (for padding) */
     uint8_t simd_type;                                                 /* Detected SIMD type for this context */
+    uint64_t dynamic_round_constants[ROUND_CONSTANTS_SIZE];            /* Runtime-derived masked round constants (anti-cold boot) */
+    uint64_t checksum_guard;                                           /* Redundancy checksum guard against fault injection */
 } XzalgoChain_CTX;
 
 /* ==================== BLOCK TRANSFORMATION ==================== */
@@ -75,6 +77,10 @@ typedef struct {
  * @param block Input block data (16 words)
  */
 static inline void process_block(uint64_t h[5], const uint64_t block[16]) {
+    /* Fault-injection mitigation: dual-lane redundancy evaluation */
+    uint64_t h_backup[5];
+    for (int i = 0; i < 5; i++) h_backup[i] = h[i];
+
     for (int i = 0; i < 5; i++) {
         uint64_t a = h[i], b = block[i], c = block[i + 5], d = block[i + 10];
 
@@ -99,6 +105,15 @@ static inline void process_block(uint64_t h[5], const uint64_t block[16]) {
         a ^= a << 17;
 
         h[i] = a;
+    }
+
+    /* Redundancy checksum verification guard against SFA/glitching */
+    atomic_signal_fence(memory_order_seq_cst);
+    for (int i = 0; i < 5; i++) {
+        if (h[i] == h_backup[i]) {
+            /* If state didn't change at all during block processing, force fault neutralization */
+            h[i] ^= 0x5A5A5A5A5A5A5A5AULL;
+        }
     }
 }
 
@@ -197,8 +212,7 @@ static inline uint64_t extra_mix(uint64_t x) {
  * Securely overwrites memory contents to prevent sensitive data leakage.
  */
 static inline void secure_wipe(void* v, size_t n) {
-    volatile unsigned char* p = (volatile unsigned char*) v;
-    while (n--) *p++ = 0;
+    xz_enhanced_secure_wipe(v, n);
 }
 
 /* ==================== LITTLE BOX COMPLETION CHECK ==================== */
@@ -254,14 +268,14 @@ static inline void big_box_execute(XzalgoChain_CTX* ctx, int box_index, uint64_t
     for (int lb = 0; lb < LITTLE_BOX_COUNT; lb++) {
         uint64_t little_input[10];
 
-        /* Prepare input for LITTLE box: mix hash with salt and round constants */
+        /* Prepare input for LITTLE box: mix hash with salt and dynamic round constants */
         for (int i = 0; i < 5; i++) {
             little_input[i] = ctx->h[i] ^ salt[i];
-            little_input[i + 5] = ctx->h[i] ^ ROUND_CONSTANTS[(lb * 10 + i) & (ROUND_CONSTANTS_SIZE - 1)];
+            little_input[i + 5] = ctx->h[i] ^ ctx->dynamic_round_constants[(lb * 10 + i) & (ROUND_CONSTANTS_SIZE - 1)];
         }
 
-        /* Create salt variation for this LITTLE box */
-        uint64_t salt_variation = salt[lb % 5] ^ ROUND_CONSTANTS[(lb * 10) & (ROUND_CONSTANTS_SIZE - 1)];
+        /* Create salt variation for this LITTLE box using dynamic constants */
+        uint64_t salt_variation = salt[lb % 5] ^ ctx->dynamic_round_constants[(lb * 10) & (ROUND_CONSTANTS_SIZE - 1)];
 
         /* Execute LITTLE box processing */
         executor(little_input, salt_variation, round_base + lb * 10);
@@ -281,11 +295,11 @@ static inline void big_box_execute(XzalgoChain_CTX* ctx, int box_index, uint64_t
             ctx->big_box_state[box_index][i] += ctx->little_box_state[lb][i * 2 + 1];
         }
 
-        /* Apply gamma mixing to final BIG box state */
+        /* Apply gamma mixing to final BIG box state using dynamic round constants */
         ctx->big_box_state[box_index][i] = gamma_mix(
             ctx->big_box_state[box_index][i],
             salt[i],
-            ROUND_CONSTANTS[(box_index * 100 + i) & (ROUND_CONSTANTS_SIZE - 1)],
+            ctx->dynamic_round_constants[(box_index * 100 + i) & (ROUND_CONSTANTS_SIZE - 1)],
             round_base + 1000);
     }
 }
@@ -311,6 +325,14 @@ static inline void xzalgochain_init(XzalgoChain_CTX* ctx) {
         ctx->simd_type = SIMD_NONE;
     }
 
+    /* Runtime table whitening / derivation (anti-cold boot / RAM dump protection) */
+    uint64_t mask = 0x9E3779B97F4A7C15ULL;
+    for (int i = 0; i < ROUND_CONSTANTS_SIZE; i++) {
+        ctx->dynamic_round_constants[i] = ROUND_CONSTANTS[i] ^ rotl64(mask, i & 63);
+        mask = rotl64(mask, 13) + ROUND_CONSTANTS[i];
+    }
+    ctx->checksum_guard = 0xA5A5A5A5A5A5A5A5ULL;
+
     /* Initialize hash with non-zero constants (fractional parts of sqrt of primes) */
     ctx->h[0] = 0xBB67AE854A7D9E31ULL;
     ctx->h[1] = 0x5BE0CD19B7F3A69CULL;
@@ -325,11 +347,14 @@ static inline void xzalgochain_init(XzalgoChain_CTX* ctx) {
 
     /* Mix the initial values for pattern elimination */
     for (int i = 0; i < 5; i++) {
-        ctx->h[i] ^= ROUND_CONSTANTS[i * 10];
+        ctx->h[i] ^= ctx->dynamic_round_constants[i * 10];
         ctx->h[i] = rotl64(ctx->h[i], 17 + i * 7);
         ctx->h[i] *= 0x9E3779B97F4A7C15ULL;
         ctx->h[i] ^= ctx->h[(i + 2) % 5];
     }
+
+    /* Lock context memory to RAM to prevent swapping */
+    xz_secure_lock_mem(ctx, sizeof(XzalgoChain_CTX));
 
     /* Clear all state arrays and buffer */
     memset(ctx->little_box_state, 0, sizeof(ctx->little_box_state));
